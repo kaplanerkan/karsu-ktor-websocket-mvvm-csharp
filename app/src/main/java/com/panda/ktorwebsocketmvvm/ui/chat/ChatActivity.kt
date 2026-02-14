@@ -274,6 +274,16 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnMic.isEnabled = true
                 binding.btnSettings.isEnabled = false
             }
+            is ConnectionState.Reconnecting -> {
+                binding.tvStatus.text = getString(
+                    R.string.status_reconnecting, state.attempt, state.maxAttempts
+                )
+                binding.btnConnect.isEnabled = false
+                binding.btnDisconnect.isEnabled = true
+                binding.btnSend.isEnabled = false
+                binding.btnMic.isEnabled = false
+                binding.btnSettings.isEnabled = false
+            }
             is ConnectionState.Error -> {
                 binding.tvStatus.text = getString(R.string.status_error)
                 binding.btnConnect.isEnabled = true

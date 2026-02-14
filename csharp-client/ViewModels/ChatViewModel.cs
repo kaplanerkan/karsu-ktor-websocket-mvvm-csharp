@@ -8,6 +8,10 @@ namespace ChatClientWpf.ViewModels
 {
     public class ChatViewModel : BaseViewModel, IDisposable
     {
+        private const int MaxReconnectAttempts = 10;
+        private const int InitialBackoffMs = 1000;
+        private const int MaxBackoffMs = 30_000;
+
         private readonly WebSocketService _webSocketService;
         private readonly SettingsService _settings;
         private readonly AudioPlayerService _audioPlayer;
@@ -16,6 +20,12 @@ namespace ChatClientWpf.ViewModels
         private readonly RelayCommand _disconnectCommand;
         private readonly RelayCommand _sendCommand;
         private readonly RelayCommand _playVoiceCommand;
+
+        private bool _userDisconnected;
+        private CancellationTokenSource? _reconnectCts;
+        private string _lastHost = "";
+        private int _lastPort = 8080;
+        private string _lastClientId = "";
 
         // ── Properties ──────────────────────────────────────
 
@@ -110,8 +120,15 @@ namespace ChatClientWpf.ViewModels
         {
             try
             {
+                CancelReconnect();
+                _userDisconnected = false;
+
                 var port = int.TryParse(Port, out var p) ? p : 8080;
                 var clientId = string.IsNullOrWhiteSpace(Username) ? "papa-1" : Username.Trim();
+
+                _lastHost = Host;
+                _lastPort = port;
+                _lastClientId = clientId;
 
                 _settings.Host = Host;
                 _settings.Port = Port;
@@ -134,6 +151,9 @@ namespace ChatClientWpf.ViewModels
         {
             try
             {
+                _userDisconnected = true;
+                CancelReconnect();
+
                 // Clear chat history on disconnect
                 DispatchUI(() => Messages.Clear());
 
@@ -213,6 +233,71 @@ namespace ChatClientWpf.ViewModels
                 ConnectionStatus = $"Error: {error}";
                 IsConnected = false;
             });
+
+            // Auto-reconnect on unexpected connection loss
+            if (!_userDisconnected && error.Contains("Connection lost"))
+            {
+                _ = StartReconnectAsync();
+            }
+        }
+
+        // ── Reconnect ─────────────────────────────────────
+
+        /// <summary>
+        /// Attempts to reconnect with exponential backoff.
+        /// Messages are preserved during reconnection attempts.
+        /// </summary>
+        private async Task StartReconnectAsync()
+        {
+            CancelReconnect();
+            var cts = new CancellationTokenSource();
+            _reconnectCts = cts;
+
+            try
+            {
+                for (var attempt = 1; attempt <= MaxReconnectAttempts; attempt++)
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    DispatchUI(() =>
+                    {
+                        ConnectionStatus = $"Reconnecting ({attempt}/{MaxReconnectAttempts})...";
+                        _connectCommand.RaiseCanExecuteChanged();
+                        _disconnectCommand.RaiseCanExecuteChanged();
+                    });
+
+                    var backoff = Math.Min(InitialBackoffMs * (1 << (attempt - 1)), MaxBackoffMs);
+                    await Task.Delay(backoff, cts.Token);
+
+                    if (_userDisconnected) return;
+
+                    await _webSocketService.ConnectAsync(_lastHost, _lastPort, _lastClientId);
+
+                    // Wait briefly for connection to establish
+                    await Task.Delay(2000, cts.Token);
+
+                    if (_webSocketService.IsConnected) return;
+                }
+
+                // All attempts exhausted
+                DispatchUI(() =>
+                {
+                    ConnectionStatus = $"Reconnect failed after {MaxReconnectAttempts} attempts";
+                    _connectCommand.RaiseCanExecuteChanged();
+                });
+            }
+            catch (OperationCanceledException) { /* reconnect cancelled */ }
+            catch (Exception ex)
+            {
+                Logger.Error("Reconnect error", ex);
+            }
+        }
+
+        private void CancelReconnect()
+        {
+            _reconnectCts?.Cancel();
+            _reconnectCts?.Dispose();
+            _reconnectCts = null;
         }
 
         // ── Helpers ─────────────────────────────────────────
@@ -230,6 +315,7 @@ namespace ChatClientWpf.ViewModels
 
         public void Dispose()
         {
+            CancelReconnect();
             _webSocketService.OnMessageReceived -= OnMessageReceived;
             _webSocketService.OnConnectionStateChanged -= OnConnectionStateChanged;
             _webSocketService.OnError -= OnErrorOccurred;
