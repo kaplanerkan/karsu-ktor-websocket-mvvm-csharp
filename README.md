@@ -25,8 +25,9 @@ A real-time WebSocket chat application with an **embedded Ktor server**, an **An
 │                   - removeConnection(id)                │
 │                   - broadcast(msg, excludeId)           │
 │                                                         │
-│   GET /health     → Health check                        │
-│   GET /clients    → Connected client list               │
+│   GET  /health    → Health check                        │
+│   GET  /clients   → Connected client list               │
+│   POST /send      → Send message via REST (curl)        │
 └────────────┬────────────────────┬───────────────────────┘
              │                    │
        WebSocket             WebSocket
@@ -133,6 +134,51 @@ Android: types "Hi!" → Send
   → WebSocket frame → Ktor Server
   → Server broadcasts → C# Client
   → C# displays bubble: "karsu: Hi!"
+```
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Health check — returns `Server is running` |
+| `GET` | `/clients` | Returns a list of connected client IDs |
+| `POST` | `/send` | Broadcasts a JSON message to all connected WebSocket clients |
+| `WS` | `/chat/{clientId}` | WebSocket endpoint for real-time bidirectional chat |
+
+### WebSocket Connection
+
+Connect to the chat server using the WebSocket protocol:
+
+```
+ws://<host>:8080/chat/<clientId>
+```
+
+- `clientId` — unique identifier for the connecting client (e.g., `android-1`, `csharp-1`, `web-1`)
+- On connect, the server sends a welcome message: `{"sender":"server","content":"Welcome <clientId>!"}`
+- All messages from a client are broadcast to every other connected client
+
+**Example with [websocat](https://github.com/vi/websocat):**
+```bash
+websocat ws://192.168.1.120:8080/chat/terminal-1
+# Type a JSON message and press Enter:
+{"sender":"terminal-1","content":"Hello from terminal!"}
+```
+
+### REST API — Send Message via curl
+
+Send a message to all connected clients without a WebSocket connection:
+
+```bash
+# Send a message to all connected clients
+curl -X POST http://192.168.1.120:8080/send \
+  -H "Content-Type: application/json" \
+  -d '{"sender":"curl-user","content":"Hello from curl!"}'
+
+# Check server health
+curl http://192.168.1.120:8080/health
+
+# List connected clients
+curl http://192.168.1.120:8080/clients
 ```
 
 ## Features

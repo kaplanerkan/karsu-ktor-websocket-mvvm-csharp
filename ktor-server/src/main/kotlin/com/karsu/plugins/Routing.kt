@@ -4,6 +4,7 @@ import com.karsu.model.ChatMessage
 import com.karsu.session.ConnectionManager
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -26,6 +27,22 @@ fun Application.configureRouting() {
         get("/clients") {
             val clients = connectionManager.getConnectedClients()
             call.respondText(clients.toString(), status = HttpStatusCode.OK)
+        }
+
+        /**
+         * REST endpoint to send a message via HTTP POST.
+         * Broadcasts to all connected WebSocket clients.
+         *
+         * curl -X POST http://HOST:8080/send \
+         *   -H "Content-Type: application/json" \
+         *   -d '{"sender":"curl","content":"Hello from curl!"}'
+         */
+        post("/send") {
+            val message = call.receive<ChatMessage>()
+            val jsonString = Json.encodeToString(message)
+            println("[REST /send] ${message.sender}: ${message.content}")
+            connectionManager.broadcast(jsonString)
+            call.respondText("Message sent to ${connectionManager.getConnectedClients().size} client(s)", status = HttpStatusCode.OK)
         }
 
         /**

@@ -25,8 +25,9 @@ Ktor WebSocket sunucusu, Android istemcisi ve C# WPF masaustu istemcisinden olus
 │                   - removeConnection(id)                │
 │                   - broadcast(msg, excludeId)           │
 │                                                         │
-│   GET /health     → Saglik kontrolu                     │
-│   GET /clients    → Bagli istemci listesi                │
+│   GET  /health    → Saglik kontrolu                     │
+│   GET  /clients   → Bagli istemci listesi                │
+│   POST /send      → REST ile mesaj gonder (curl)        │
 └────────────┬────────────────────┬───────────────────────┘
              │                    │
        WebSocket             WebSocket
@@ -133,6 +134,51 @@ Android: "Selam!" yazar → Gonder
   → WebSocket frame → Ktor Sunucu
   → Sunucu yayinlar → C# Istemci
   → C# ekraninda balon: "karsu: Selam!"
+```
+
+## API Endpoint'leri
+
+| Metod | Endpoint | Aciklama |
+|---|---|---|
+| `GET` | `/health` | Saglik kontrolu — `Server is running` doner |
+| `GET` | `/clients` | Bagli istemci ID'lerinin listesini doner |
+| `POST` | `/send` | Bagli tum WebSocket istemcilerine JSON mesaj yayinlar |
+| `WS` | `/chat/{clientId}` | Gercek zamanli cift yonlu sohbet icin WebSocket endpoint'i |
+
+### WebSocket Baglantisi
+
+WebSocket protokolu ile sohbet sunucusuna baglanin:
+
+```
+ws://<host>:8080/chat/<clientId>
+```
+
+- `clientId` — baglanan istemci icin benzersiz kimlik (ornek: `android-1`, `csharp-1`, `web-1`)
+- Baglantiginda sunucu karsilama mesaji gonderir: `{"sender":"server","content":"Welcome <clientId>!"}`
+- Bir istemciden gelen tum mesajlar, bagli diger tum istemcilere yayinlanir (broadcast)
+
+**[websocat](https://github.com/vi/websocat) ile ornek:**
+```bash
+websocat ws://192.168.1.120:8080/chat/terminal-1
+# Bir JSON mesaj yazin ve Enter'a basin:
+{"sender":"terminal-1","content":"Terminalden merhaba!"}
+```
+
+### REST API — curl ile Mesaj Gonderme
+
+WebSocket baglantisi olmadan tum bagli istemcilere mesaj gonderin:
+
+```bash
+# Tum bagli istemcilere mesaj gonder
+curl -X POST http://192.168.1.120:8080/send \
+  -H "Content-Type: application/json" \
+  -d '{"sender":"curl-user","content":"curl ile merhaba!"}'
+
+# Sunucu saglik kontrolu
+curl http://192.168.1.120:8080/health
+
+# Bagli istemcileri listele
+curl http://192.168.1.120:8080/clients
 ```
 
 ## Ozellikler
