@@ -11,10 +11,10 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.koin.ktor.ext.inject
+import org.koin.mp.KoinPlatform
 
 fun Application.configureRouting() {
-    val connectionManager by inject<ConnectionManager>()
+    val connectionManager = KoinPlatform.getKoin().get<ConnectionManager>()
 
     routing {
 

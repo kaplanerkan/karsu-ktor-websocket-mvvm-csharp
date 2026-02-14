@@ -3,6 +3,7 @@ package com.panda.ktorwebsocketmvvm
 import android.app.Application
 import android.util.Log
 import com.karsu.ServerStarter
+import com.karsu.di.serverModule
 import com.panda.ktorwebsocketmvvm.di.appModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,7 +32,7 @@ class ChatApplication : Application() {
         startKoin {
             androidLogger()
             androidContext(this@ChatApplication)
-            modules(appModule)
+            modules(appModule, serverModule)
         }
     }
 
