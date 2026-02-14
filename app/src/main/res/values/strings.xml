@@ -41,4 +41,8 @@
 
     <!-- Close Reason -->
     <string name="close_reason">Client closed</string>
+
+    <!-- Voice Message -->
+    <string name="btn_mic">Record voice</string>
+    <string name="error_mic_permission">Microphone permission required for voice messages</string>
 </resources>

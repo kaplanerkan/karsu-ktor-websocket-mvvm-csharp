@@ -6,6 +6,10 @@ import com.panda.ktorwebsocketmvvm.data.remote.WebSocketDataSource
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * Repository that abstracts the [WebSocketDataSource] for the ViewModel layer.
+ * Exposes connection state, incoming messages, and methods to send text or voice messages.
+ */
 class ChatRepository(
     private val webSocketDataSource: WebSocketDataSource
 ) {
@@ -24,6 +28,23 @@ class ChatRepository(
         val message = ChatMessage(
             sender = sender,
             content = content
+        )
+        webSocketDataSource.sendMessage(message)
+    }
+
+    /**
+     * Sends a voice message with Base64-encoded audio data over WebSocket.
+     * @param audioData Base64-encoded AAC/M4A audio bytes.
+     * @param durationMs Recording duration in milliseconds.
+     * @param sender    Display name of the sender.
+     */
+    suspend fun sendVoiceMessage(audioData: String, durationMs: Long, sender: String) {
+        val message = ChatMessage(
+            sender = sender,
+            content = "",
+            type = "voice",
+            audioData = audioData,
+            audioDuration = durationMs
         )
         webSocketDataSource.sendMessage(message)
     }

@@ -1,11 +1,17 @@
 package com.panda.ktorwebsocketmvvm.ui.chat
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -22,11 +28,26 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
+/**
+ * Main chat screen activity.
+ * Handles connection UI, text/voice messaging, and settings.
+ */
 class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private val viewModel: ChatViewModel by viewModel()
     private lateinit var adapter: ChatAdapter
+
+    /** Permission launcher for RECORD_AUDIO — starts recording on grant. */
+    private val requestAudioPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.onRecordStart()
+        } else {
+            Toast.makeText(this, R.string.error_mic_permission, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     private val prefs by lazy {
         getSharedPreferences("connection_settings", Context.MODE_PRIVATE)
@@ -67,7 +88,7 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        adapter = ChatAdapter()
+        adapter = ChatAdapter { message -> viewModel.onPlayVoice(message) }
         binding.recyclerMessages.apply {
             layoutManager = LinearLayoutManager(this@ChatActivity).apply {
                 stackFromEnd = true
@@ -101,6 +122,41 @@ class ChatActivity : AppCompatActivity() {
             }
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+
+        setupMicButton()
+    }
+
+    /**
+     * Sets up the mic button with hold-to-record touch handling.
+     * Requests RECORD_AUDIO permission on first press if not already granted.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupMicButton() {
+        binding.btnMic.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    if (hasAudioPermission()) {
+                        viewModel.onRecordStart()
+                    } else {
+                        requestAudioPermission.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (viewModel.isRecording.value) {
+                        viewModel.onRecordEnd()
+                    }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun hasAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun showSettingsDialog() {
@@ -182,6 +238,12 @@ class ChatActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                launch {
+                    viewModel.isRecording.collect { recording ->
+                        binding.btnMic.alpha = if (recording) 0.5f else 1.0f
+                    }
+                }
             }
         }
     }
@@ -193,6 +255,7 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnConnect.isEnabled = true
                 binding.btnDisconnect.isEnabled = false
                 binding.btnSend.isEnabled = false
+                binding.btnMic.isEnabled = false
                 binding.btnSettings.isEnabled = true
             }
             is ConnectionState.Connecting -> {
@@ -200,6 +263,7 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnConnect.isEnabled = false
                 binding.btnDisconnect.isEnabled = false
                 binding.btnSend.isEnabled = false
+                binding.btnMic.isEnabled = false
                 binding.btnSettings.isEnabled = false
             }
             is ConnectionState.Connected -> {
@@ -207,6 +271,7 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnConnect.isEnabled = false
                 binding.btnDisconnect.isEnabled = true
                 binding.btnSend.isEnabled = true
+                binding.btnMic.isEnabled = true
                 binding.btnSettings.isEnabled = false
             }
             is ConnectionState.Error -> {
@@ -214,6 +279,7 @@ class ChatActivity : AppCompatActivity() {
                 binding.btnConnect.isEnabled = true
                 binding.btnDisconnect.isEnabled = false
                 binding.btnSend.isEnabled = false
+                binding.btnMic.isEnabled = false
                 binding.btnSettings.isEnabled = true
 
                 val msg = when (state.type) {

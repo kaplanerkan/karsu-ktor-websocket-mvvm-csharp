@@ -68,7 +68,8 @@ fun Application.configureRouting() {
                     when (frame) {
                         is Frame.Text -> {
                             val text = frame.readText()
-                            println("[$clientId]: $text")
+                            val logText = if (text.length > 200) text.take(200) + "...[truncated]" else text
+                            println("[$clientId]: $logText")
 
                             // Broadcast message to all other clients
                             connectionManager.broadcast(text, excludeClientId = clientId)

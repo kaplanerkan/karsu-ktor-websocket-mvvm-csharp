@@ -130,5 +130,18 @@
             android:enabled="false"
             android:padding="10dp"
             app:tint="?attr/colorOnPrimary" />
+
+        <ImageButton
+            android:id="@+id/btnMic"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_mic"
+            android:background="@drawable/bg_send_button"
+            android:contentDescription="@string/btn_mic"
+            android:scaleType="centerInside"
+            android:enabled="false"
+            android:padding="10dp"
+            app:tint="?attr/colorOnPrimary" />
     </LinearLayout>
 </LinearLayout>

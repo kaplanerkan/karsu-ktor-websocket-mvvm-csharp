@@ -10,10 +10,12 @@ namespace ChatClientWpf.ViewModels
     {
         private readonly WebSocketService _webSocketService;
         private readonly SettingsService _settings;
+        private readonly AudioPlayerService _audioPlayer;
 
         private readonly RelayCommand _connectCommand;
         private readonly RelayCommand _disconnectCommand;
         private readonly RelayCommand _sendCommand;
+        private readonly RelayCommand _playVoiceCommand;
 
         // ── Properties ──────────────────────────────────────
 
@@ -78,6 +80,7 @@ namespace ChatClientWpf.ViewModels
         public ICommand ConnectCommand => _connectCommand;
         public ICommand DisconnectCommand => _disconnectCommand;
         public ICommand SendCommand => _sendCommand;
+        public ICommand PlayVoiceCommand => _playVoiceCommand;
 
         // ── Constructor ─────────────────────────────────────
 
@@ -85,6 +88,7 @@ namespace ChatClientWpf.ViewModels
         {
             _webSocketService = new WebSocketService();
             _settings = SettingsService.Load();
+            _audioPlayer = new AudioPlayerService();
 
             Host = _settings.Host ?? "127.0.0.1";
             Port = _settings.Port ?? "8080";
@@ -93,6 +97,7 @@ namespace ChatClientWpf.ViewModels
             _connectCommand = new RelayCommand(_ => ConnectAsync(), _ => !IsConnected);
             _disconnectCommand = new RelayCommand(_ => DisconnectAsync(), _ => IsConnected);
             _sendCommand = new RelayCommand(_ => SendAsync(), _ => IsConnected && !string.IsNullOrWhiteSpace(MessageInput));
+            _playVoiceCommand = new RelayCommand(PlayVoice, _ => true);
 
             _webSocketService.OnMessageReceived += OnMessageReceived;
             _webSocketService.OnConnectionStateChanged += OnConnectionStateChanged;
@@ -165,6 +170,20 @@ namespace ChatClientWpf.ViewModels
             }
         }
 
+        /// <summary>
+        /// Plays or stops voice playback for the given message.
+        /// </summary>
+        private void PlayVoice(object? parameter)
+        {
+            if (parameter is not ChatMessage message || !message.IsVoice) return;
+            if (string.IsNullOrEmpty(message.AudioData)) return;
+
+            if (_audioPlayer.IsPlaying)
+                _audioPlayer.Stop();
+            else
+                _audioPlayer.Play(message.AudioData);
+        }
+
         // ── Event Handlers ──────────────────────────────────
 
         private void OnMessageReceived(ChatMessage message)
@@ -215,6 +234,7 @@ namespace ChatClientWpf.ViewModels
             _webSocketService.OnConnectionStateChanged -= OnConnectionStateChanged;
             _webSocketService.OnError -= OnErrorOccurred;
             _webSocketService.Dispose();
+            _audioPlayer.Dispose();
             GC.SuppressFinalize(this);
         }
     }

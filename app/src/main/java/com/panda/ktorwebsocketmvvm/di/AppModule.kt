@@ -1,5 +1,7 @@
 package com.panda.ktorwebsocketmvvm.di
 
+import com.panda.ktorwebsocketmvvm.data.audio.AudioPlayer
+import com.panda.ktorwebsocketmvvm.data.audio.AudioRecorder
 import com.panda.ktorwebsocketmvvm.data.remote.WebSocketDataSource
 import com.panda.ktorwebsocketmvvm.data.repository.ChatRepository
 import com.panda.ktorwebsocketmvvm.ui.chat.ChatViewModel
@@ -10,5 +12,7 @@ import org.koin.dsl.module
 val appModule = module {
     singleOf(::WebSocketDataSource)
     singleOf(::ChatRepository)
+    singleOf(::AudioRecorder)
+    singleOf(::AudioPlayer)
     viewModelOf(::ChatViewModel)
 }

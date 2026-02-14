@@ -94,4 +94,70 @@ class ChatMessageTest {
         // @Transient only excludes from serialization, not from equals/hashCode
         assertNotEquals(m1, m2)
     }
+
+    // ── Voice message tests ──────────────────────────────
+
+    @Test
+    fun `default type is text`() {
+        val message = ChatMessage(sender = "user", content = "hi")
+        assertEquals("text", message.type)
+        assertFalse(message.isVoice)
+    }
+
+    @Test
+    fun `isVoice returns true for voice type`() {
+        val message = ChatMessage(sender = "user", content = "", type = "voice")
+        assertTrue(message.isVoice)
+    }
+
+    @Test
+    fun `audioData defaults to null`() {
+        val message = ChatMessage(sender = "user", content = "hi")
+        assertNull(message.audioData)
+    }
+
+    @Test
+    fun `audioDuration defaults to zero`() {
+        val message = ChatMessage(sender = "user", content = "hi")
+        assertEquals(0L, message.audioDuration)
+    }
+
+    @Test
+    fun `voice message serialization includes audio fields`() {
+        val message = ChatMessage(
+            sender = "karsu",
+            content = "",
+            timestamp = 1000L,
+            type = "voice",
+            audioData = "AQID",
+            audioDuration = 3500
+        )
+        val jsonStr = json.encodeToString(message)
+
+        assertTrue(jsonStr.contains("\"type\":\"voice\""))
+        assertTrue(jsonStr.contains("\"audioData\":\"AQID\""))
+        assertTrue(jsonStr.contains("\"audioDuration\":3500"))
+    }
+
+    @Test
+    fun `voice message deserialization works`() {
+        val jsonStr = """{"sender":"karsu","content":"","timestamp":1000,"type":"voice","audioData":"AQID","audioDuration":3500}"""
+        val message = json.decodeFromString<ChatMessage>(jsonStr)
+
+        assertEquals("voice", message.type)
+        assertTrue(message.isVoice)
+        assertEquals("AQID", message.audioData)
+        assertEquals(3500L, message.audioDuration)
+    }
+
+    @Test
+    fun `text message deserialization defaults type to text`() {
+        val jsonStr = """{"sender":"user","content":"hello","timestamp":1000}"""
+        val message = json.decodeFromString<ChatMessage>(jsonStr)
+
+        assertEquals("text", message.type)
+        assertFalse(message.isVoice)
+        assertNull(message.audioData)
+        assertEquals(0L, message.audioDuration)
+    }
 }

@@ -71,13 +71,33 @@
                                     <Run Text=" · " Foreground="#888888" />
                                     <Run Text="{Binding FormattedTime, Mode=OneWay}" Foreground="#888888" />
                                 </TextBlock>
+                                <!-- Text content (hidden for voice messages) -->
                                 <TextBlock x:Name="ContentText" Text="{Binding Content, Mode=OneWay}" FontSize="14"
                                            Foreground="#E0E0E0"
                                            TextWrapping="Wrap" Margin="0,3,0,0" />
+                                <!-- Voice message panel (hidden for text messages) -->
+                                <StackPanel x:Name="VoicePanel" Orientation="Horizontal"
+                                            Visibility="Collapsed" Margin="0,3,0,0">
+                                    <Button Content="&#9654;" FontSize="16" Padding="6,2"
+                                            Foreground="#4DB6AC" Background="Transparent" BorderThickness="0"
+                                            Command="{Binding DataContext.PlayVoiceCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}" Cursor="Hand" />
+                                    <TextBlock Text="{Binding FormattedDuration, Mode=OneWay}"
+                                               Foreground="#AAAAAA" FontSize="13"
+                                               VerticalAlignment="Center" Margin="6,0,0,0" />
+                                    <TextBlock Text="Voice" Foreground="#888888" FontSize="12"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"
+                                               FontStyle="Italic" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </Grid>
                     <DataTemplate.Triggers>
+                        <!-- Voice message: show voice panel, hide text content -->
+                        <DataTrigger Binding="{Binding IsVoice}" Value="True">
+                            <Setter TargetName="ContentText" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="VoicePanel" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
                         <!-- Other users: left-aligned, dark surface bubble -->
                         <DataTrigger Binding="{Binding IsFromMe}" Value="False">
                             <Setter TargetName="Bubble" Property="Background" Value="#2B2B30" />
