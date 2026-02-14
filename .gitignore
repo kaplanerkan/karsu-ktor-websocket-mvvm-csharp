@@ -22,5 +22,8 @@ app/release/
 csharp-client/bin/
 csharp-client/obj/
 
+# Visual Studio
+csharp-client/.vs/
+
 # Claude
 .claude/
