@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.panda.ktorwebsocketmvvm.data.model.ChatMessage
 import com.panda.ktorwebsocketmvvm.data.model.ConnectionState
 import com.panda.ktorwebsocketmvvm.data.repository.ChatRepository
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository
@@ -20,6 +20,7 @@ class ChatViewModel(
     private val _messageInput = MutableStateFlow("")
     val messageInput: StateFlow<String> = _messageInput.asStateFlow()
 
+    @Volatile
     private var currentUsername: String = "karsu"
 
     init {
@@ -69,7 +70,9 @@ class ChatViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        viewModelScope.launch {
+        // viewModelScope is already cancelled in onCleared, use GlobalScope for cleanup
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch(Dispatchers.IO) {
             repository.disconnect()
         }
     }

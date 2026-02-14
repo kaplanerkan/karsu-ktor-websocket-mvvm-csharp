@@ -9,14 +9,17 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.Closeable
 
 /**
  * WebSocket bağlantısını yöneten data source.
  * MVVM'de Repository katmanı bunu kullanır.
  */
-class WebSocketDataSource {
+class WebSocketDataSource : Closeable {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -29,8 +32,9 @@ class WebSocketDataSource {
         }
     }
 
-    private var session: DefaultClientWebSocketSession? = null
-    private var connectionJob: Job? = null
+    private val mutex = Mutex()
+    @Volatile private var session: DefaultClientWebSocketSession? = null
+    @Volatile private var connectionJob: Job? = null
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -42,12 +46,19 @@ class WebSocketDataSource {
      * WebSocket sunucusuna bağlanır ve gelen mesajları dinler.
      */
     suspend fun connect(host: String, port: Int, clientId: String = "android-1") {
-        if (_connectionState.value == ConnectionState.Connected) return
+        mutex.withLock {
+            if (_connectionState.value == ConnectionState.Connected ||
+                _connectionState.value == ConnectionState.Connecting) return
 
-        _connectionState.value = ConnectionState.Connecting
+            // Cancel previous connection if exists
+            connectionJob?.cancel()
+            session = null
 
-        try {
-            connectionJob = CoroutineScope(Dispatchers.IO).launch {
+            _connectionState.value = ConnectionState.Connecting
+        }
+
+        connectionJob = CoroutineScope(Dispatchers.IO).launch {
+            try {
                 client.webSocket(
                     host = host,
                     port = port,
@@ -84,11 +95,13 @@ class WebSocketDataSource {
                         )
                     }
                 }
+            } catch (e: Exception) {
+                _connectionState.value = ConnectionState.Error(
+                    ErrorType.CONNECTION_FAILED, e.message
+                )
+            } finally {
+                session = null
             }
-        } catch (e: Exception) {
-            _connectionState.value = ConnectionState.Error(
-                ErrorType.CONNECTION_FAILED, e.message
-            )
         }
     }
 
@@ -98,7 +111,14 @@ class WebSocketDataSource {
     suspend fun sendMessage(message: ChatMessage) {
         try {
             val jsonString = json.encodeToString(message)
-            session?.send(Frame.Text(jsonString))
+            val currentSession = session
+            if (currentSession == null) {
+                _connectionState.value = ConnectionState.Error(
+                    ErrorType.MESSAGE_FAILED, "Not connected"
+                )
+                return
+            }
+            currentSession.send(Frame.Text(jsonString))
         } catch (e: Exception) {
             _connectionState.value = ConnectionState.Error(
                 ErrorType.MESSAGE_FAILED, e.message
@@ -111,10 +131,19 @@ class WebSocketDataSource {
      */
     suspend fun disconnect() {
         try {
-            session?.close(CloseReason(CloseReason.Codes.NORMAL, "Client closed"))
+            withTimeout(5000L) {
+                session?.close(CloseReason(CloseReason.Codes.NORMAL, "Client closed"))
+            }
         } catch (_: Exception) { }
         connectionJob?.cancel()
         session = null
         _connectionState.value = ConnectionState.Disconnected
+    }
+
+    override fun close() {
+        runBlocking {
+            disconnect()
+        }
+        client.close()
     }
 }

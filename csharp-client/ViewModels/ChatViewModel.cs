@@ -86,9 +86,9 @@ namespace ChatClientWpf.ViewModels
             _webSocketService = new WebSocketService();
             _settings = SettingsService.Load();
 
-            Host = _settings.Host;
-            Port = _settings.Port;
-            Username = _settings.Username;
+            Host = _settings.Host ?? "127.0.0.1";
+            Port = _settings.Port ?? "8080";
+            Username = _settings.Username ?? "papa-1";
 
             _connectCommand = new RelayCommand(_ => ConnectAsync(), _ => !IsConnected);
             _disconnectCommand = new RelayCommand(_ => DisconnectAsync(), _ => IsConnected);
@@ -211,7 +211,11 @@ namespace ChatClientWpf.ViewModels
 
         public void Dispose()
         {
+            _webSocketService.OnMessageReceived -= OnMessageReceived;
+            _webSocketService.OnConnectionStateChanged -= OnConnectionStateChanged;
+            _webSocketService.OnError -= OnErrorOccurred;
             _webSocketService.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

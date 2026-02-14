@@ -19,7 +19,11 @@ namespace ChatClientWpf.Services
                 if (File.Exists(SettingsFile))
                 {
                     var json = File.ReadAllText(SettingsFile);
-                    return JsonSerializer.Deserialize<SettingsService>(json) ?? new SettingsService();
+                    var result = JsonSerializer.Deserialize<SettingsService>(json) ?? new SettingsService();
+                    result.Host ??= "127.0.0.1";
+                    result.Port ??= "8080";
+                    result.Username ??= "papa-1";
+                    return result;
                 }
             }
             catch (Exception ex)

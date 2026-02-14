@@ -6,6 +6,7 @@ import com.karsu.ServerStarter
 import com.panda.ktorwebsocketmvvm.di.appModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -17,6 +18,8 @@ class ChatApplication : Application() {
         private const val TAG = "KtorServer"
         const val SERVER_PORT = 8080
     }
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
@@ -33,7 +36,7 @@ class ChatApplication : Application() {
     }
 
     private fun startKtorServer() {
-        CoroutineScope(Dispatchers.IO).launch {
+        applicationScope.launch {
             try {
                 Log.i(TAG, "Starting Ktor server on port $SERVER_PORT...")
                 ServerStarter.start(port = SERVER_PORT)

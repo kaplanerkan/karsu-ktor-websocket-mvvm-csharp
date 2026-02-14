@@ -195,4 +195,4 @@ dotnet run
 
 ## Lisans
 
-Bu proje egitim ve gosterim amaciyla gelistirilmistir.
+Bu proje [MIT Lisansi](LICENSE) ile lisanslanmistir.

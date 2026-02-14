@@ -40,7 +40,7 @@ class ChatAdapter : ListAdapter<ChatMessage, ChatAdapter.MessageViewHolder>(Mess
             binding.tvContent.text = message.content
             binding.tvTime.text = timeFormat.format(Date(message.timestamp))
 
-            val bubbleParams = binding.cardBubble.layoutParams as FrameLayout.LayoutParams
+            val bubbleParams = binding.cardBubble.layoutParams as? FrameLayout.LayoutParams ?: return
 
             when {
                 message.isFromMe -> {
