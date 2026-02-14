@@ -239,6 +239,27 @@ dotnet run
 | **Service** | `WebSocketService.cs` | ClientWebSocket yonetimi |
 | **Service** | `SettingsService.cs` | JSON dosya kaliciligi |
 
+## Yol Haritasi
+
+- [ ] Gelen mesaj bildirimi (Android arka plan)
+- [ ] Yaziyor gostergesi ("yaziyor..." durumu)
+- [ ] Cevrimici kullanici paneli (`/clients` endpoint'i ile)
+- [ ] Sohbette tarih gruplama ("Bugun", "Dun")
+- [ ] Mesaj gonderme/alma ses efekti
+- [ ] Emoji secici
+- [ ] Ozel mesaj (DM — `sendTo` ile birebir sohbet)
+- [ ] Yerel veritabani ile mesaj gecmisi (Room / SQLite)
+- [ ] Gorsel ve dosya paylasimi (Base64 / multipart)
+- [ ] Sohbet odalari (`/chat/{roomId}/{clientId}`)
+- [ ] Baglanti kopmasinda otomatik yeniden baglanti
+- [ ] Karanlik/Aydinlik tema degistirme (C# istemci)
+- [ ] Uctan uca sifreleme (E2E)
+- [ ] Web istemci (React / Vue)
+- [ ] Kullanici dogrulama (JWT)
+- [ ] Push bildirim (Firebase FCM)
+- [ ] Mesaj iletim durumu (gonderildi / iletildi / okundu)
+- [ ] Sesli ve goruntulu arama (WebRTC)
+
 ## Lisans
 
 Bu proje [MIT Lisansi](LICENSE) ile lisanslanmistir.

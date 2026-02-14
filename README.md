@@ -239,6 +239,27 @@ dotnet run
 | **Service** | `WebSocketService.cs` | ClientWebSocket management |
 | **Service** | `SettingsService.cs` | JSON file persistence |
 
+## Roadmap
+
+- [ ] Notification for incoming messages (Android background)
+- [ ] Typing indicator ("typing..." status)
+- [ ] Online users panel (using `/clients` endpoint)
+- [ ] Date grouping in chat ("Today", "Yesterday")
+- [ ] Sound effect on message send/receive
+- [ ] Emoji picker
+- [ ] Direct messages (private chat using `sendTo`)
+- [ ] Message history with local database (Room / SQLite)
+- [ ] Image & file sharing (Base64 / multipart)
+- [ ] Chat rooms (`/chat/{roomId}/{clientId}`)
+- [ ] Auto-reconnect on connection loss
+- [ ] Dark/Light theme toggle (C# client)
+- [ ] End-to-end encryption (E2E)
+- [ ] Web client (React / Vue)
+- [ ] User authentication (JWT)
+- [ ] Push notifications (Firebase FCM)
+- [ ] Message delivery status (sent / delivered / read)
+- [ ] Voice & video call (WebRTC)
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
