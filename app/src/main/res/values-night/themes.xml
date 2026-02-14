@@ -1,0 +1,21 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Base application theme - Dark -->
+    <style name="Base.Theme.KtorWebSocketMVVM" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/turquoise_primary_dark</item>
+        <item name="colorOnPrimary">@color/turquoise_on_primary_dark</item>
+        <item name="colorPrimaryContainer">@color/turquoise_primary_container_dark</item>
+        <item name="colorOnPrimaryContainer">@color/turquoise_on_primary_container_dark</item>
+        <item name="colorSecondary">@color/turquoise_secondary_dark</item>
+        <item name="colorOnSecondary">@color/turquoise_on_secondary_dark</item>
+        <item name="colorSecondaryContainer">@color/turquoise_secondary_container_dark</item>
+        <item name="colorOnSecondaryContainer">@color/turquoise_on_secondary_container_dark</item>
+        <item name="colorSurface">@color/turquoise_surface_dark</item>
+        <item name="colorOnSurface">@color/turquoise_on_surface_dark</item>
+        <item name="colorSurfaceVariant">@color/turquoise_surface_variant_dark</item>
+        <item name="colorOnSurfaceVariant">@color/turquoise_on_surface_variant_dark</item>
+        <item name="colorOutline">@color/turquoise_outline_dark</item>
+        <item name="android:fontFamily">@font/montserrat_medium</item>
+        <item name="materialButtonStyle">@style/Widget.App.Button</item>
+    </style>
+</resources>

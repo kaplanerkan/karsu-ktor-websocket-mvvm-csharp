@@ -1,0 +1,37 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Shape override: 2dp corners -->
+    <style name="ShapeAppearance.App.SmallComponent" parent="">
+        <item name="cornerSize">2dp</item>
+    </style>
+
+    <!-- Button style: 2dp corners -->
+    <style name="Widget.App.Button" parent="Widget.Material3.Button">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.SmallComponent</item>
+    </style>
+
+    <style name="Widget.App.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.SmallComponent</item>
+    </style>
+
+    <!-- Base application theme - Light -->
+    <style name="Base.Theme.KtorWebSocketMVVM" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/turquoise_primary</item>
+        <item name="colorOnPrimary">@color/turquoise_on_primary</item>
+        <item name="colorPrimaryContainer">@color/turquoise_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/turquoise_on_primary_container</item>
+        <item name="colorSecondary">@color/turquoise_secondary</item>
+        <item name="colorOnSecondary">@color/turquoise_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/turquoise_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/turquoise_on_secondary_container</item>
+        <item name="colorSurface">@color/turquoise_surface</item>
+        <item name="colorOnSurface">@color/turquoise_on_surface</item>
+        <item name="colorSurfaceVariant">@color/turquoise_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/turquoise_on_surface_variant</item>
+        <item name="colorOutline">@color/turquoise_outline</item>
+        <item name="android:fontFamily">@font/montserrat_medium</item>
+        <item name="materialButtonStyle">@style/Widget.App.Button</item>
+    </style>
+
+    <style name="Theme.KtorWebSocketMVVM" parent="Base.Theme.KtorWebSocketMVVM" />
+</resources>

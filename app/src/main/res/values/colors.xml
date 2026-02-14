@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Turquoise Palette - Light -->
+    <color name="turquoise_primary">#00838F</color>
+    <color name="turquoise_on_primary">#FFFFFF</color>
+    <color name="turquoise_primary_container">#B2EBF2</color>
+    <color name="turquoise_on_primary_container">#004D57</color>
+    <color name="turquoise_secondary">#4DB6AC</color>
+    <color name="turquoise_on_secondary">#FFFFFF</color>
+    <color name="turquoise_secondary_container">#B2DFDB</color>
+    <color name="turquoise_on_secondary_container">#00352F</color>
+    <color name="turquoise_surface">#F5FDFE</color>
+    <color name="turquoise_on_surface">#1A1C1E</color>
+    <color name="turquoise_surface_variant">#DAE5E7</color>
+    <color name="turquoise_on_surface_variant">#3F484B</color>
+    <color name="turquoise_outline">#6F797C</color>
+
+    <!-- Turquoise Palette - Dark -->
+    <color name="turquoise_primary_dark">#4DD0E1</color>
+    <color name="turquoise_on_primary_dark">#003640</color>
+    <color name="turquoise_primary_container_dark">#004D57</color>
+    <color name="turquoise_on_primary_container_dark">#B2EBF2</color>
+    <color name="turquoise_secondary_dark">#80CBC4</color>
+    <color name="turquoise_on_secondary_dark">#003732</color>
+    <color name="turquoise_secondary_container_dark">#00524B</color>
+    <color name="turquoise_on_secondary_container_dark">#B2DFDB</color>
+    <color name="turquoise_surface_dark">#1A1C1E</color>
+    <color name="turquoise_on_surface_dark">#E2E2E6</color>
+    <color name="turquoise_surface_variant_dark">#3F484B</color>
+    <color name="turquoise_on_surface_variant_dark">#BFC8CB</color>
+    <color name="turquoise_outline_dark">#899295</color>
+</resources>

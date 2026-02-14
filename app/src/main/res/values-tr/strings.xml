@@ -1,0 +1,40 @@
+<resources>
+    <!-- Connection Bar -->
+    <string name="btn_connect">Bağlan</string>
+    <string name="btn_disconnect">Kes</string>
+
+    <!-- Status -->
+    <string name="status_disconnected">⚫ Bağlantı yok</string>
+    <string name="status_connecting">🟡 Bağlanıyor…</string>
+    <string name="status_connected">🟢 Bağlı</string>
+    <string name="status_error">🔴 Hata</string>
+
+    <!-- Message Input -->
+    <string name="message_hint">Mesaj yaz…</string>
+    <string name="btn_send">Gönder</string>
+
+    <!-- Error Messages -->
+    <string name="error_connection_lost">Bağlantı kesildi: %s</string>
+    <string name="error_connection_failed">Bağlantı hatası: %s</string>
+    <string name="error_message_failed">Mesaj gönderilemedi: %s</string>
+
+    <!-- Settings Dialog -->
+    <string name="btn_settings">Ayarlar</string>
+    <string name="settings_title">Bağlantı Ayarları</string>
+    <string name="label_host">Host</string>
+    <string name="label_port">Port</string>
+    <string name="btn_save">Kaydet</string>
+    <string name="btn_cancel">İptal</string>
+    <string name="settings_saved">Ayarlar kaydedildi</string>
+    <string name="server_info">Ktor-Server çalışıyor %1$s:%2$d</string>
+    <string name="server_info_unavailable">Ktor-Server çalışıyor (IP bulunamadı)</string>
+
+    <!-- Username -->
+    <string name="label_username">Kullanıcı Adı</string>
+
+    <!-- Theme -->
+    <string name="label_dark_mode">Karanlık Mod</string>
+
+    <!-- Close Reason -->
+    <string name="close_reason">Client kapatıldı</string>
+</resources>
