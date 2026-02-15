@@ -2,7 +2,7 @@
 
 > [English README](README.md)
 
-Ktor WebSocket sunucusu, Android istemcisi ve C# WPF masaustu istemcisinden olusan gercek zamanli bir sohbet uygulamasi. Tum iletisim JSON formatinda WebSocket uzerinden gerceklesir.
+Ktor WebSocket sunucusu, Android istemcisi, C# WPF masaustu istemcisi ve tarayici tabanli web istemcisinden olusan gercek zamanli bir sohbet uygulamasi. Sohbet odalari, ozel mesajlar, sesli mesajlar, yaziyor gostergesi, emoji secici, iletim durumu takibi ve daha fazlasini destekler.
 
 <p align="center">
   <img src="screenshots/explorer_T5QXvZJ2hS.png" alt="Her iki istemci sohbet halinde" width="700" />
@@ -16,35 +16,35 @@ Ktor WebSocket sunucusu, Android istemcisi ve C# WPF masaustu istemcisinden olus
 ## Mimari
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     KTOR SUNUCU                         │
-│              ws://host:8080/chat/{clientId}              │
-│                                                         │
-│   Routing.kt ──▶ ConnectionManager                      │
-│   (WebSocket)     - addConnection(id, session)          │
-│                   - removeConnection(id)                │
-│                   - broadcast(msg, excludeId)           │
-│                                                         │
-│   GET  /health    → Saglik kontrolu                     │
-│   GET  /clients   → Bagli istemci listesi                │
-│   POST /send      → REST ile mesaj gonder (curl)        │
-└────────────┬────────────────────┬───────────────────────┘
-             │                    │
-       WebSocket             WebSocket
-             │                    │
-┌────────────▼──────────┐ ┌──────▼──────────────────────┐
-│   ANDROID ISTEMCI     │ │   C# WPF ISTEMCI            │
-│   (Kotlin · MVVM)     │ │   (.NET 8 · MVVM)           │
-│                       │ │                              │
-│  View (Activity+XML)  │ │  View (MainWindow.xaml)      │
-│    ↕ StateFlow        │ │    ↕ Data Binding            │
-│  ViewModel            │ │  ViewModel                   │
-│    ↕                  │ │    ↕                         │
-│  Repository           │ │  WebSocketService            │
-│    ↕                  │ │  (ClientWebSocket)           │
-│  WebSocketDataSource  │ │                              │
-│  (Ktor Client)        │ │  SettingsService (JSON)      │
-└───────────────────────┘ └─────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                        KTOR SUNUCU                            │
+│        ws://host:8080/chat/{clientId}                         │
+│        ws://host:8080/chat/{roomId}/{clientId}                │
+│                                                              │
+│   Routing.kt ──▶ ConnectionManager                            │
+│   (WebSocket)     - addConnection(id, session, roomId)       │
+│                   - removeConnection(id)                     │
+│                   - broadcastToRoom(roomId, msg, excludeId)  │
+│                   - sendTo(clientId, msg)  ← Ozel Mesajlar   │
+│                                                              │
+│   GET  /health              → Saglik kontrolu                │
+│   GET  /clients             → Bagli istemci listesi (JSON)   │
+│   GET  /rooms               → Aktif oda listesi              │
+│   GET  /rooms/{id}/clients  → Oda uyeleri                    │
+│   GET  /                    → Web sohbet istemcisi (HTML)    │
+│   POST /send                → REST ile mesaj gonder (curl)   │
+└──────┬──────────┬──────────────────┬─────────────────────────┘
+       │          │                  │
+  WebSocket   WebSocket         WebSocket
+       │          │                  │
+┌──────▼────┐ ┌───▼──────────┐ ┌────▼──────────────────────────┐
+│ ANDROID   │ │ C# WPF      │ │ WEB ISTEMCI                   │
+│ (Kotlin)  │ │ (.NET 8)     │ │ (HTML/CSS/JS)                 │
+│ MVVM      │ │ MVVM         │ │ Tek sayfa uygulama            │
+│           │ │              │ │ Ktor'dan GET / ile sunulur     │
+│ StateFlow │ │ Data Binding │ │ Vanilla JS + Web Audio API    │
+│ Koin DI   │ │ RelayCommand │ │                               │
+└───────────┘ └──────────────┘ └───────────────────────────────┘
 ```
 
 ## Teknoloji Yigini
@@ -83,11 +83,13 @@ Ktor WebSocket sunucusu, Android istemcisi ve C# WPF masaustu istemcisinden olus
 KtorWebSocketMVVM/
 ├── app/                          # Android istemci modulu
 │   └── src/main/java/.../
-│       ├── di/                   # Koin DI modulu
+│       ├── di/                   # Koin DI modulu (AppModule)
 │       ├── data/
 │       │   ├── model/            # ChatMessage, ConnectionState, ErrorType
 │       │   ├── remote/           # WebSocketDataSource (Ktor Client)
+│       │   ├── audio/            # AudioRecorder, AudioPlayer, SoundEffectManager
 │       │   └── repository/       # ChatRepository
+│       ├── notification/         # ChatNotificationManager
 │       └── ui/chat/              # ChatActivity, ChatViewModel, ChatAdapter
 │
 ├── ktor-server/                  # Gomulu Ktor sunucu modulu
@@ -95,13 +97,15 @@ KtorWebSocketMVVM/
 │       ├── di/                   # Koin sunucu modulu
 │       ├── model/                # ChatMessage
 │       ├── plugins/              # Routing, Sockets, Serialization
-│       └── session/              # ConnectionManager
+│       └── session/              # ConnectionManager (oda destekli)
+│   └── src/main/resources/
+│       └── web/chat.html         # Tarayici tabanli web sohbet istemcisi
 │
 ├── csharp-client/                # WPF masaustu istemci
 │   ├── Models/                   # ChatMessage
 │   ├── ViewModels/               # ChatViewModel, BaseViewModel, RelayCommand
 │   ├── Views/                    # MainWindow.xaml
-│   └── Services/                 # WebSocketService, SettingsService, Logger
+│   └── Services/                 # WebSocketService, SettingsService, AudioRecorderService, Logger
 │
 └── screenshots/
 ```
@@ -109,17 +113,24 @@ KtorWebSocketMVVM/
 ## Nasil Calisir?
 
 1. **Sunucu baslar** — Android uygulamasinin icine gomulu olarak `8080` portunda calisir (bagimsiz olarak da calistirilabilir)
-2. **Istemciler baglanir** — WebSocket ile `ws://<host>:8080/chat/<clientId>` adresine baglanir
+2. **Istemciler baglanir** — WebSocket ile `ws://<host>:8080/chat/<clientId>` veya `ws://<host>:8080/chat/<roomId>/<clientId>` adresine baglanir
 3. Sunucu, baglanan istemciye **karsilama mesaji** gonderir
-4. Bir istemci mesaj gonderdiginde, sunucu mesaji bagli diger tum istemcilere **yayinlar** (broadcast)
-5. Mesajlar `sender`, `content` ve `timestamp` alanlariyla JSON formatinda kodlanir
+4. Bir istemci mesaj gonderdiginde, sunucu mesaji ayni odadaki diger tum istemcilere **yayinlar**
+5. Ozel mesajlar (DM) yalnizca hedef kullaniciya `sendTo` alani ile yonlendirilir
+6. Sunucu, gonderene **iletim onayi** (`status: "delivered"`) geri gonderir
 
 ### Mesaj Formati
 ```json
 {
   "sender": "karsu",
   "content": "Merhaba!",
-  "timestamp": 1771100166330
+  "timestamp": 1771100166330,
+  "type": "text",
+  "messageId": "a1b2c3d4",
+  "sendTo": null,
+  "status": "sent",
+  "audioData": null,
+  "audioDuration": 0
 }
 ```
 
@@ -127,46 +138,53 @@ KtorWebSocketMVVM/
 ```
 C# Istemci: "Merhaba!" yazar → Gonder
   → WebSocket frame → Ktor Sunucu
-  → Sunucu yayinlar → Android Istemci
-  → Android ekraninda balon: "papa-1: Merhaba!"
+  → Sunucu odaya yayinlar → Android + Web Istemci
+  → Sunucu iletim onayi gonderir → C# Istemci (✓✓)
 
-Android: "Selam!" yazar → Gonder
+Android: "papa-1"e DM gonderir → "Selam!"
   → WebSocket frame → Ktor Sunucu
-  → Sunucu yayinlar → C# Istemci
-  → C# ekraninda balon: "karsu: Selam!"
+  → Sunucu yalnizca papa-1'e yonlendirir (ozel)
+  → papa-1 gorur: "[DM] karsu: Selam!"
 ```
 
 ## API Endpoint'leri
 
 | Metod | Endpoint | Aciklama |
 |---|---|---|
+| `GET` | `/` | Tarayici tabanli web sohbet istemcisini sunar |
 | `GET` | `/health` | Saglik kontrolu — `Server is running` doner |
-| `GET` | `/clients` | Bagli istemci ID'lerinin listesini doner |
+| `GET` | `/clients` | Bagli istemci ID'lerini JSON dizisi olarak doner |
+| `GET` | `/rooms` | Aktif oda ID'lerini JSON dizisi olarak doner |
+| `GET` | `/rooms/{roomId}/clients` | Belirli bir odadaki istemci ID'lerini doner |
 | `POST` | `/send` | Bagli tum WebSocket istemcilerine JSON mesaj yayinlar |
-| `WS` | `/chat/{clientId}` | Gercek zamanli cift yonlu sohbet icin WebSocket endpoint'i |
+| `WS` | `/chat/{clientId}` | WebSocket endpoint'i (varsayilan "general" odasi) |
+| `WS` | `/chat/{roomId}/{clientId}` | Belirli bir oda icin WebSocket endpoint'i |
 
 ### WebSocket Baglantisi
 
 WebSocket protokolu ile sohbet sunucusuna baglanin:
 
 ```
-ws://<host>:8080/chat/<clientId>
+ws://<host>:8080/chat/<clientId>                # "general" odasina katilir
+ws://<host>:8080/chat/<roomId>/<clientId>        # belirli bir odaya katilir
 ```
 
 - `clientId` — baglanan istemci icin benzersiz kimlik (ornek: `android-1`, `csharp-1`, `web-1`)
+- `roomId` — katilacak sohbet odasi (mesajlar odalara gore gruplanir)
 - Baglantiginda sunucu karsilama mesaji gonderir: `{"sender":"server","content":"Welcome <clientId>!"}`
-- Bir istemciden gelen tum mesajlar, bagli diger tum istemcilere yayinlanir (broadcast)
+- Mesajlar yalnizca ayni odadaki istemcilere yayinlanir
 
 **[websocat](https://github.com/vi/websocat) ile ornek:**
 ```bash
 websocat ws://192.168.1.120:8080/chat/terminal-1
 # Bir JSON mesaj yazin ve Enter'a basin:
 {"sender":"terminal-1","content":"Terminalden merhaba!"}
+
+# Belirli bir odaya katilma:
+websocat ws://192.168.1.120:8080/chat/dev-team/terminal-1
 ```
 
 ### REST API — curl ile Mesaj Gonderme
-
-WebSocket baglantisi olmadan tum bagli istemcilere mesaj gonderin:
 
 ```bash
 # Tum bagli istemcilere mesaj gonder
@@ -177,18 +195,44 @@ curl -X POST http://192.168.1.120:8080/send \
 # Sunucu saglik kontrolu
 curl http://192.168.1.120:8080/health
 
-# Bagli istemcileri listele
+# Bagli istemcileri listele (JSON dizisi)
 curl http://192.168.1.120:8080/clients
+
+# Aktif odalari listele
+curl http://192.168.1.120:8080/rooms
+
+# Belirli bir odadaki istemcileri listele
+curl http://192.168.1.120:8080/rooms/general/clients
 ```
 
 ## Ozellikler
 
+### Mesajlasma
 - **WhatsApp tarzi sohbet balonlari** — kendi mesajlariniz sagda, digerlerininki solda, sunucu mesajlari ortada
-- **Karanlik / Aydinlik tema** degistirme (MaterialSwitch ile, Android)
-- **Kalici ayarlar** — host, port, kullanici adi oturumlar arasi kaydedilir (her iki istemci)
+- **Sohbet odalari** — farkli odalara katilma ve olusturma (`/chat/{roomId}/{clientId}`)
+- **Ozel mesajlar (DM)** — `sendTo` alani ile birebir ozel mesajlasma, sunucu tarafinda yonlendirme
+- **Sesli mesajlar** — ses kaydi, gonderme ve oynatma (Base64 kodlu, tum platformlar)
+- **Emoji secici** — hizli emoji secim paneli (50+ emoji, tum platformlar)
+- **Yaziyor gostergesi** — gercek zamanli "X yaziyor..." debounce mantigi ile
+- **Mesaj iletim durumu** — gonderildi (✓), iletildi (✓✓), okundu (✓✓) takibi, sunucu onayi ile
+- **Enter tusu** ile mesaj gonderme (tum istemciler)
+
+### Bildirimler ve Ses
+- **Push bildirimleri** — Android uygulamasi arka plandayken gelen mesaj bildirimleri
+- **Ses efektleri** — mesaj gonderme/alma sesli geri bildirimi (Android: ToneGenerator, C#: SystemSounds, Web: Web Audio API)
+- **Cevrimici kullanicilar paneli** — gercek zamanli kullanici sayisi, tiklayinca liste gorunumu, 5 saniyede bir HTTP polling
+
+### Arayuz ve Tema
+- **Karanlik / Aydinlik tema degistirme** — MaterialSwitch (Android), DynamicResource degisimi (C# WPF)
 - **Ozel yazi tipi** — Montserrat Medium (Android)
-- **Enter tusu** ile mesaj gonderme (her iki istemci)
+- **Kalici ayarlar** — host, port, kullanici adi, oda oturumlar arasi kaydedilir (tum istemciler)
 - **Baglanti durumu yonetimi** — Baglaniyor, Bagli, Baglanti Kesildi, Hata durumlari
+- **Otomatik yeniden baglanti** — baglanti kopmasinda otomatik yeniden baglanma (Android ve C#)
+
+### Coklu Platform
+- **Android** — Kotlin, MVVM, Material 3, Koin DI, Ktor Client
+- **C# WPF** — .NET 8, MVVM, ClientWebSocket, karanlik/aydinlik tema
+- **Web tarayici** — Ktor'dan `GET /` ile sunulan tek sayfa HTML/CSS/JS uygulamasi, derleme gerektirmez
 - **Dosya tabanli loglama** (C# istemci)
 
 ## Baslarken
@@ -196,69 +240,94 @@ curl http://192.168.1.120:8080/clients
 ### Secenek 1: Sunucu Android Icinde Gomulu
 1. Projeyi Android Studio'da acin
 2. `app` modulunu calistirin — Ktor sunucusu otomatik olarak `8080` portunda baslar
-3. C# istemciyi calistirin: `cd csharp-client && dotnet run`
-4. C# istemcisine Android cihazin IP adresini girin ve baglanin
+3. Herhangi bir istemciden baglanin (C#, web tarayici veya baska bir Android cihaz)
 
 ### Secenek 2: Bagimsiz Sunucu
 ```bash
 cd ktor-server
 ./gradlew run
 # Sunucu calisir: ws://localhost:8080/chat/{clientId}
+# Web istemci adresi: http://localhost:8080/
 ```
 
 ### Android Istemci
 - **Emulator** → Host: `10.0.2.2`
 - **Ayni agdaki gercek cihaz** → Host: bilgisayarinizin IP adresi
-- Ayarlar ikonuna tiklayarak host, port ve kullanici adini yapilandiriniz
+- Ayarlar ikonuna tiklayarak host, port, kullanici adi ve oda yapilandiriniz
 
 ### C# WPF Istemci
 ```bash
 cd csharp-client
 dotnet run
 ```
-- Ust cubuga host IP, port ve kullanici adini girin
+- Ust cubuga host IP, port, kullanici adi ve oda bilgilerini girin
 - Ayarlar otomatik olarak `settings.json` dosyasina kaydedilir
+- Gunes/ay butonu ile karanlik/aydinlik tema arasinda gecis yapin
+
+### Web Istemci
+- Herhangi bir modern tarayicida `http://<sunucu-ip>:8080/` adresini acin
+- Kullanici adini girin, gerekirse host/port ayarlayin ve Baglan'a tiklayin
+- Kurulum veya derleme gerektirmez
 
 ## MVVM Katmanlari
 
 ### Android (Kotlin)
 | Katman | Dosya | Gorev |
 |---|---|---|
-| **Model** | `ChatMessage.kt`, `ConnectionState.kt` | Veri siniflari |
+| **Model** | `ChatMessage.kt`, `ConnectionState.kt` | Veri siniflari (serializable) |
 | **View** | `ChatActivity.kt` + XML layout'lar | UI render, StateFlow gozlemleme |
-| **ViewModel** | `ChatViewModel.kt` | UI durumu, kullanici aksiyonlari |
+| **ViewModel** | `ChatViewModel.kt` | UI durumu, kullanici aksiyonlari, online polling |
 | **Repository** | `ChatRepository.kt` | Veri kaynagi soyutlamasi |
 | **DataSource** | `WebSocketDataSource.kt` | Ktor Client WebSocket I/O |
+| **Audio** | `AudioRecorder.kt`, `AudioPlayer.kt`, `SoundEffectManager.kt` | Ses kaydi, oynatma, ses efektleri |
+| **Bildirim** | `ChatNotificationManager.kt` | Arka plan mesaj bildirimleri |
 
 ### C# WPF (.NET 8)
 | Katman | Dosya | Gorev |
 |---|---|---|
-| **Model** | `ChatMessage.cs` | JSON attribute'lu veri sinifi |
-| **View** | `MainWindow.xaml` | WPF UI, data binding |
-| **ViewModel** | `ChatViewModel.cs` | INotifyPropertyChanged, RelayCommand |
+| **Model** | `ChatMessage.cs` | JSON attribute'lu veri sinifi, iletim durumu |
+| **View** | `MainWindow.xaml` | WPF UI, data binding, emoji secici |
+| **ViewModel** | `ChatViewModel.cs` | INotifyPropertyChanged, RelayCommand, tema degistirme |
 | **Service** | `WebSocketService.cs` | ClientWebSocket yonetimi |
 | **Service** | `SettingsService.cs` | JSON dosya kaliciligi |
+| **Service** | `AudioRecorderService.cs` | Sesli mesaj kaydi |
+
+### Web Istemci (HTML/CSS/JS)
+| Bilesen | Aciklama |
+|---|---|
+| `chat.html` | Gomulu CSS/JS ile tek sayfa uygulama |
+| WebSocket API | Yerel tarayici WebSocket baglantisi |
+| Web Audio API | Sesli mesaj oynatma + ses efektleri |
 
 ## Yol Haritasi
 
-- [ ] Gelen mesaj bildirimi (Android arka plan)
-- [ ] Yaziyor gostergesi ("yaziyor..." durumu)
-- [ ] Cevrimici kullanici paneli (`/clients` endpoint'i ile)
+### Tamamlanan
+- [x] Gelen mesaj bildirimi (Android arka plan)
+- [x] Yaziyor gostergesi ("yaziyor..." durumu)
+- [x] Cevrimici kullanici paneli (`/clients` endpoint'i ile)
+- [x] Mesaj gonderme/alma ses efekti
+- [x] Emoji secici
+- [x] Ozel mesaj (DM — `sendTo` ile birebir sohbet)
+- [x] Sohbet odalari (`/chat/{roomId}/{clientId}`)
+- [x] Baglanti kopmasinda otomatik yeniden baglanti
+- [x] Karanlik/Aydinlik tema degistirme (C# istemci)
+- [x] Web istemci (tek sayfa HTML/CSS/JS)
+- [x] Sesli mesajlar (kayit, gonderme, oynatma — tum platformlar)
+- [x] Mesaj iletim durumu (gonderildi / iletildi / okundu)
+
+### Planlanan
 - [ ] Sohbette tarih gruplama ("Bugun", "Dun")
-- [ ] Mesaj gonderme/alma ses efekti
-- [ ] Emoji secici
-- [ ] Ozel mesaj (DM — `sendTo` ile birebir sohbet)
 - [ ] Yerel veritabani ile mesaj gecmisi (Room / SQLite)
 - [ ] Gorsel ve dosya paylasimi (Base64 / multipart)
-- [ ] Sohbet odalari (`/chat/{roomId}/{clientId}`)
-- [ ] Baglanti kopmasinda otomatik yeniden baglanti
-- [ ] Karanlik/Aydinlik tema degistirme (C# istemci)
 - [ ] Uctan uca sifreleme (E2E)
-- [ ] Web istemci (React / Vue)
 - [ ] Kullanici dogrulama (JWT)
 - [ ] Push bildirim (Firebase FCM)
-- [ ] Mesaj iletim durumu (gonderildi / iletildi / okundu)
 - [ ] Sesli ve goruntulu arama (WebRTC)
+- [ ] Mesaj reaksiyonlari (mesajlara emoji tepkisi)
+- [ ] Mesaja yanit verme (alinti + yanit)
+- [ ] Kullanici profili / avatar destegi
+- [ ] Mesaj arama / filtreleme
+- [ ] Okundu bilgisi (kullanici bazinda okunma takibi)
 
 ## Lisans
 
