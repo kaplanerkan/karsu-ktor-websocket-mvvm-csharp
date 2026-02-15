@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:ChatClientWpf.ViewModels"
         Title="KarSu Chat Client (C#)" Height="500" Width="600"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
 
     <Window.DataContext>
         <vm:ChatViewModel />
@@ -15,29 +15,45 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Connection Bar -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
             <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                     Width="100" Margin="0,0,6,0"
+                     Width="90" Margin="0,0,6,0"
                      ToolTip="Username" />
             <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                     Width="130" Margin="0,0,6,0"
+                     Width="110" Margin="0,0,6,0"
                      ToolTip="Host address" />
             <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                     Width="50" Margin="0,0,6,0"
+                     Width="45" Margin="0,0,6,0"
                      ToolTip="Port" />
+            <TextBox Text="{Binding RoomId, UpdateSourceTrigger=PropertyChanged}"
+                     Width="80" Margin="0,0,6,0"
+                     ToolTip="Room ID" />
             <Button Content="Connect" Command="{Binding ConnectCommand}"
                     Padding="12,4" Margin="0,0,4,0" />
             <Button Content="Disconnect" Command="{Binding DisconnectCommand}"
-                    Padding="12,4" />
+                    Padding="12,4" Margin="0,0,4,0" />
+            <Button Content="&#x2600;/&#x1F319;" Command="{Binding ToggleThemeCommand}"
+                    Padding="8,4" ToolTip="Toggle Dark/Light Theme"
+                    Background="Transparent" BorderThickness="0" FontSize="14" />
         </StackPanel>
 
         <!-- Status Bar -->
-        <TextBlock Grid.Row="1" Text="{Binding ConnectionStatus}"
-                   Foreground="{StaticResource PrimaryBrush}"
-                   FontSize="13" Margin="0,0,0,8" />
+        <DockPanel Grid.Row="1" Margin="0,0,0,8">
+            <TextBlock Text="{Binding ConnectionStatus}"
+                       Foreground="{DynamicResource PrimaryBrush}"
+                       FontSize="13" />
+            <TextBlock Text="{Binding OnlineUsersText}"
+                       Foreground="#80CBC4" FontSize="12"
+                       HorizontalAlignment="Right"
+                       VerticalAlignment="Center"
+                       Cursor="Hand"
+                       ToolTip="Click to select DM target"
+                       MouseLeftButtonUp="OnOnlineUsersClick" />
+        </DockPanel>
 
         <!-- Message List -->
         <ListBox Grid.Row="2" ItemsSource="{Binding Messages}"
@@ -70,6 +86,8 @@
                                     <Run Text="{Binding Sender, Mode=OneWay}" />
                                     <Run Text=" · " Foreground="#888888" />
                                     <Run Text="{Binding FormattedTime, Mode=OneWay}" Foreground="#888888" />
+                                    <Run Text=" " />
+                                    <Run x:Name="StatusRun" Text="{Binding StatusIcon, Mode=OneWay}" Foreground="#80CBC4" FontSize="10" />
                                 </TextBlock>
                                 <!-- Text content (hidden for voice messages) -->
                                 <TextBlock x:Name="ContentText" Text="{Binding Content, Mode=OneWay}" FontSize="14"
@@ -121,13 +139,47 @@
             </ListBox.ItemTemplate>
         </ListBox>
 
+        <!-- Typing Indicator -->
+        <TextBlock Grid.Row="3" Text="{Binding TypingStatus}"
+                   Foreground="#80CBC4" FontSize="12" FontStyle="Italic"
+                   Margin="4,2,4,0" />
+
+        <!-- Emoji Picker Popup -->
+        <Popup x:Name="EmojiPopup" Placement="Top" PlacementTarget="{Binding ElementName=BtnEmoji}"
+               StaysOpen="False" AllowsTransparency="True">
+            <Border Background="#2B2B30" BorderBrush="#3A3A40" BorderThickness="1"
+                    CornerRadius="8" Padding="6">
+                <WrapPanel x:Name="EmojiPanel" Width="260" MaxHeight="200" />
+            </Border>
+        </Popup>
+
         <!-- Input Bar -->
-        <DockPanel Grid.Row="3" Margin="0,8,0,0">
+        <DockPanel Grid.Row="4" Margin="0,8,0,0">
             <Button Content="Send" Command="{Binding SendCommand}"
                     DockPanel.Dock="Right" Padding="16,6" Margin="6,0,0,0" />
+            <Button x:Name="BtnMic" DockPanel.Dock="Right"
+                    Padding="10,6" Margin="6,0,0,0"
+                    IsEnabled="{Binding IsConnected}"
+                    ToolTip="Hold to record voice message">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Content" Value="&#x1F3A4;" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                                <Setter Property="Content" Value="&#x1F534;" />
+                                <Setter Property="Opacity" Value="0.7" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button x:Name="BtnEmoji" DockPanel.Dock="Right"
+                    Content="&#128522;" Padding="8,4" Margin="6,0,0,0"
+                    Background="Transparent" BorderThickness="0" FontSize="18"
+                    Click="OnEmojiClick" ToolTip="Emoji picker" />
             <TextBox Text="{Binding MessageInput, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center" Padding="6,4"
-                     FontSize="14">
+                     FontSize="14" x:Name="TxtMessage">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Return" Command="{Binding SendCommand}" />
                 </TextBox.InputBindings>

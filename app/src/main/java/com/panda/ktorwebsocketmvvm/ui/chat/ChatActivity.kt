@@ -23,7 +23,9 @@ import com.panda.ktorwebsocketmvvm.data.model.ConnectionState
 import com.panda.ktorwebsocketmvvm.data.model.ErrorType
 import com.panda.ktorwebsocketmvvm.databinding.ActivityChatBinding
 import com.panda.ktorwebsocketmvvm.databinding.DialogSettingsBinding
+import com.panda.ktorwebsocketmvvm.notification.ChatNotificationManager
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -36,6 +38,7 @@ class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatBinding
     private val viewModel: ChatViewModel by viewModel()
+    private val notificationManager: ChatNotificationManager by inject()
     private lateinit var adapter: ChatAdapter
 
     /** Permission launcher for RECORD_AUDIO — starts recording on grant. */
@@ -48,6 +51,11 @@ class ChatActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.error_mic_permission, Toast.LENGTH_SHORT).show()
         }
     }
+
+    /** Permission launcher for POST_NOTIFICATIONS (Android 13+). */
+    private val requestNotificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* granted or denied — no action needed */ }
 
     private val prefs by lazy {
         getSharedPreferences("connection_settings", Context.MODE_PRIVATE)
@@ -65,6 +73,10 @@ class ChatActivity : AppCompatActivity() {
         get() = prefs.getString("username", "karsu") ?: "karsu"
         set(value) = prefs.edit().putString("username", value).apply()
 
+    private var savedRoom: String
+        get() = prefs.getString("room", "general") ?: "general"
+        set(value) = prefs.edit().putString("room", value).apply()
+
     private var isDarkMode: Boolean
         get() = prefs.getBoolean("dark_mode", false)
         set(value) = prefs.edit().putBoolean("dark_mode", value).apply()
@@ -75,9 +87,30 @@ class ChatActivity : AppCompatActivity() {
         binding = ActivityChatBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        requestNotificationPermissionIfNeeded()
         setupRecyclerView()
         setupClickListeners()
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        notificationManager.isAppInForeground = true
+        notificationManager.dismiss()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        notificationManager.isAppInForeground = false
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun applyTheme() {
@@ -103,7 +136,7 @@ class ChatActivity : AppCompatActivity() {
         }
 
         binding.btnConnect.setOnClickListener {
-            viewModel.onConnectClicked(savedHost, savedPort, savedUsername)
+            viewModel.onConnectClicked(savedHost, savedPort, savedUsername, savedRoom)
         }
 
         binding.btnDisconnect.setOnClickListener {
@@ -124,6 +157,27 @@ class ChatActivity : AppCompatActivity() {
         })
 
         setupMicButton()
+
+        binding.tvOnlineUsers.setOnClickListener {
+            val users = viewModel.onlineUsers.value
+            if (users.isNotEmpty()) {
+                val items = arrayOf("Broadcast (All)") + users.toTypedArray()
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.online_users_title)
+                    .setItems(items) { _, which ->
+                        if (which == 0) {
+                            viewModel.setDmTarget(null)
+                        } else {
+                            viewModel.setDmTarget(users[which - 1])
+                        }
+                    }
+                    .show()
+            }
+        }
+
+        binding.btnEmoji.setOnClickListener {
+            showEmojiPicker()
+        }
     }
 
     /**
@@ -184,6 +238,7 @@ class ChatActivity : AppCompatActivity() {
         dialogBinding.etDialogUsername.setText(savedUsername)
         dialogBinding.etDialogHost.setText(savedHost)
         dialogBinding.etDialogPort.setText(savedPort.toString())
+        dialogBinding.etDialogRoom.setText(savedRoom)
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.settings_title)
@@ -192,12 +247,38 @@ class ChatActivity : AppCompatActivity() {
                 val username = dialogBinding.etDialogUsername.text.toString().ifEmpty { "karsu" }
                 val host = dialogBinding.etDialogHost.text.toString().ifEmpty { "127.0.0.1" }
                 val port = dialogBinding.etDialogPort.text.toString().toIntOrNull() ?: 8080
+                val room = dialogBinding.etDialogRoom.text.toString().ifEmpty { "general" }
                 savedUsername = username
                 savedHost = host
                 savedPort = port
+                savedRoom = room
                 Toast.makeText(this, R.string.settings_saved, Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    private fun showEmojiPicker() {
+        val emojis = arrayOf(
+            "\uD83D\uDE00", "\uD83D\uDE02", "\uD83D\uDE0D", "\uD83E\uDD70", "\uD83D\uDE0E",
+            "\uD83E\uDD14", "\uD83D\uDE2E", "\uD83D\uDE22", "\uD83D\uDE21", "\uD83E\uDD73",
+            "\uD83D\uDC4D", "\uD83D\uDC4E", "\uD83D\uDC4F", "\uD83D\uDE4F", "\uD83D\uDCAA",
+            "\uD83E\uDD1D", "\u2764\uFE0F", "\uD83D\uDD25", "\u2B50", "\uD83C\uDF89",
+            "\u2705", "\u274C", "\uD83D\uDCAF", "\uD83D\uDE80", "\uD83D\uDCA1",
+            "\uD83C\uDFB5", "\uD83D\uDCF8", "\uD83C\uDFC6", "\uD83C\uDF1F", "\uD83D\uDCAC",
+            "\uD83D\uDE0A", "\uD83D\uDE01", "\uD83E\uDD23", "\uD83D\uDE05", "\uD83D\uDE07",
+            "\uD83E\uDD7A", "\uD83D\uDE0F", "\uD83D\uDE34", "\uD83E\uDD2E", "\uD83E\uDD2F",
+            "\uD83D\uDC4B", "\u270C\uFE0F", "\uD83E\uDD1E", "\uD83D\uDD90\uFE0F", "\uD83D\uDC40",
+            "\uD83D\uDC80", "\uD83E\uDD21", "\uD83D\uDC7B", "\uD83D\uDCA9", "\uD83D\uDE48"
+        )
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Emoji")
+            .setItems(emojis) { _, which ->
+                binding.etMessage.text.insert(
+                    binding.etMessage.selectionStart.coerceAtLeast(0),
+                    emojis[which]
+                )
+            }
             .show()
     }
 
@@ -242,6 +323,35 @@ class ChatActivity : AppCompatActivity() {
                 launch {
                     viewModel.isRecording.collect { recording ->
                         binding.btnMic.alpha = if (recording) 0.5f else 1.0f
+                    }
+                }
+
+                launch {
+                    viewModel.typingText.collect { text ->
+                        binding.tvTypingIndicator.visibility =
+                            if (text.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+                        binding.tvTypingIndicator.text = text
+                    }
+                }
+
+                launch {
+                    viewModel.onlineUsers.collect { users ->
+                        if (users.isEmpty()) {
+                            binding.tvOnlineUsers.visibility = android.view.View.GONE
+                        } else {
+                            binding.tvOnlineUsers.visibility = android.view.View.VISIBLE
+                            binding.tvOnlineUsers.text = getString(R.string.online_users_count, users.size)
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.dmTarget.collect { target ->
+                        binding.etMessage.hint = if (target != null) {
+                            "DM to $target..."
+                        } else {
+                            getString(R.string.message_hint)
+                        }
                     }
                 }
             }

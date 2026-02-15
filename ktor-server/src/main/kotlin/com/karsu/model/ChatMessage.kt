@@ -11,6 +11,7 @@ import kotlinx.serialization.Serializable
  * @property type          Message type: `"text"` (default) or `"voice"`.
  * @property audioData     Base64-encoded audio bytes for voice messages. Null for text.
  * @property audioDuration Duration of the voice recording in milliseconds.
+ * @property sendTo        Target client ID for direct messages. Null for broadcast.
  */
 @Serializable
 data class ChatMessage(
@@ -19,5 +20,8 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val type: String = "text",
     val audioData: String? = null,
-    val audioDuration: Long = 0
+    val audioDuration: Long = 0,
+    val sendTo: String? = null,
+    val messageId: String? = null,
+    val status: String? = null  // "sent", "delivered", "read"
 )

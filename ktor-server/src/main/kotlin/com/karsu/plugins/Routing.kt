@@ -18,24 +18,52 @@ fun Application.configureRouting() {
 
     routing {
 
+        // Web chat client
+        get("/") {
+            val html = this::class.java.classLoader.getResource("web/chat.html")?.readText()
+                ?: "Chat page not found"
+            call.respondText(html, ContentType.Text.Html)
+        }
+
         // Health check endpoint
         get("/health") {
             call.respondText("Server is running", status = HttpStatusCode.OK)
         }
 
-        // Connected client list
+        // Connected client list (JSON array)
         get("/clients") {
             val clients = connectionManager.getConnectedClients()
-            call.respondText(clients.toString(), status = HttpStatusCode.OK)
+            call.respondText(
+                Json.encodeToString(clients.toList()),
+                ContentType.Application.Json,
+                HttpStatusCode.OK
+            )
+        }
+
+        // Room members
+        get("/rooms/{roomId}/clients") {
+            val roomId = call.parameters["roomId"] ?: "general"
+            val members = connectionManager.getRoomMembers(roomId)
+            call.respondText(
+                Json.encodeToString(members.toList()),
+                ContentType.Application.Json,
+                HttpStatusCode.OK
+            )
+        }
+
+        // Active rooms
+        get("/rooms") {
+            val rooms = connectionManager.getActiveRooms()
+            call.respondText(
+                Json.encodeToString(rooms.toList()),
+                ContentType.Application.Json,
+                HttpStatusCode.OK
+            )
         }
 
         /**
          * REST endpoint to send a message via HTTP POST.
          * Broadcasts to all connected WebSocket clients.
-         *
-         * curl -X POST http://HOST:8080/send \
-         *   -H "Content-Type: application/json" \
-         *   -d '{"sender":"curl","content":"Hello from curl!"}'
          */
         post("/send") {
             val message = call.receive<ChatMessage>()
@@ -46,45 +74,96 @@ fun Application.configureRouting() {
         }
 
         /**
-         * WebSocket endpoint
+         * WebSocket endpoint (default room: "general")
          * Connection: ws://HOST:8080/chat/{clientId}
-         *
-         * clientId examples: "android-1", "csharp-1"
          */
         webSocket("/chat/{clientId}") {
             val clientId = call.parameters["clientId"] ?: "unknown"
+            handleWebSocket(connectionManager, clientId, "general")
+        }
 
-            connectionManager.addConnection(clientId, this)
+        /**
+         * WebSocket endpoint with room support
+         * Connection: ws://HOST:8080/chat/{roomId}/{clientId}
+         */
+        webSocket("/chat/{roomId}/{clientId}") {
+            val roomId = call.parameters["roomId"] ?: "general"
+            val clientId = call.parameters["clientId"] ?: "unknown"
+            handleWebSocket(connectionManager, clientId, roomId)
+        }
+    }
+}
 
-            // Welcome message
-            val welcomeMsg = ChatMessage(
-                sender = "server",
-                content = "Welcome $clientId!"
-            )
-            send(Frame.Text(Json.encodeToString(welcomeMsg)))
+/**
+ * Shared WebSocket handler for both room-based and default connections.
+ */
+private suspend fun DefaultWebSocketServerSession.handleWebSocket(
+    connectionManager: ConnectionManager,
+    clientId: String,
+    roomId: String
+) {
+    connectionManager.addConnection(clientId, this, roomId)
 
-            try {
-                for (frame in incoming) {
-                    when (frame) {
-                        is Frame.Text -> {
-                            val text = frame.readText()
-                            val logText = if (text.length > 200) text.take(200) + "...[truncated]" else text
-                            println("[$clientId]: $logText")
+    // Welcome message
+    val welcomeMsg = ChatMessage(
+        sender = "server",
+        content = "Welcome $clientId! Room: $roomId"
+    )
+    send(Frame.Text(Json.encodeToString(welcomeMsg)))
 
-                            // Broadcast message to all other clients
-                            connectionManager.broadcast(text, excludeClientId = clientId)
+    try {
+        for (frame in incoming) {
+            when (frame) {
+                is Frame.Text -> {
+                    val text = frame.readText()
+                    val logText = if (text.length > 200) text.take(200) + "...[truncated]" else text
+                    println("[$roomId/$clientId]: $logText")
+
+                    try {
+                        val msg = Json.decodeFromString<ChatMessage>(text)
+
+                        // Skip status and typing messages from delivery tracking
+                        val isTrackable = msg.type != "typing" && msg.type != "status" && !msg.messageId.isNullOrBlank()
+
+                        when {
+                            msg.type == "status" -> {
+                                // Forward read/delivery receipts to the original sender
+                                if (!msg.sendTo.isNullOrBlank()) {
+                                    connectionManager.sendTo(msg.sendTo, text)
+                                }
+                            }
+                            !msg.sendTo.isNullOrBlank() -> {
+                                connectionManager.sendTo(msg.sendTo, text)
+                            }
+                            else -> {
+                                connectionManager.broadcastToRoom(roomId, text, excludeClientId = clientId)
+                            }
                         }
-                        is Frame.Close -> {
-                            println("[$clientId] closed connection")
+
+                        // Send "delivered" ack back to the sender
+                        if (isTrackable && msg.type != "status") {
+                            val ack = ChatMessage(
+                                sender = "server",
+                                content = "",
+                                type = "status",
+                                messageId = msg.messageId,
+                                status = "delivered"
+                            )
+                            connectionManager.sendTo(clientId, Json.encodeToString(ack))
                         }
-                        else -> { /* Ping/Pong handled automatically */ }
+                    } catch (_: Exception) {
+                        connectionManager.broadcastToRoom(roomId, text, excludeClientId = clientId)
                     }
                 }
-            } catch (e: Exception) {
-                println("[$clientId] error: ${e.message}")
-            } finally {
-                connectionManager.removeConnection(clientId)
+                is Frame.Close -> {
+                    println("[$roomId/$clientId] closed connection")
+                }
+                else -> { /* Ping/Pong handled automatically */ }
             }
         }
+    } catch (e: Exception) {
+        println("[$roomId/$clientId] error: ${e.message}")
+    } finally {
+        connectionManager.removeConnection(clientId)
     }
 }

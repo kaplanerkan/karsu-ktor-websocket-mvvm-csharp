@@ -5,6 +5,7 @@ import com.panda.ktorwebsocketmvvm.data.model.ConnectionState
 import com.panda.ktorwebsocketmvvm.data.remote.WebSocketDataSource
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.UUID
 
 /**
  * Repository that abstracts the [WebSocketDataSource] for the ViewModel layer.
@@ -20,16 +21,21 @@ class ChatRepository(
     val incomingMessages: SharedFlow<ChatMessage>
         get() = webSocketDataSource.incomingMessages
 
-    suspend fun connect(host: String, port: Int, clientId: String) {
-        webSocketDataSource.connect(host, port, clientId)
+    suspend fun connect(host: String, port: Int, clientId: String, roomId: String = "general") {
+        webSocketDataSource.connect(host, port, clientId, roomId)
     }
 
-    suspend fun sendMessage(content: String, sender: String) {
+    suspend fun sendMessage(content: String, sender: String, sendTo: String? = null): String {
+        val msgId = UUID.randomUUID().toString().take(8)
         val message = ChatMessage(
             sender = sender,
-            content = content
+            content = content,
+            sendTo = sendTo,
+            messageId = msgId,
+            status = "sent"
         )
         webSocketDataSource.sendMessage(message)
+        return msgId
     }
 
     /**
@@ -47,6 +53,24 @@ class ChatRepository(
             audioDuration = durationMs
         )
         webSocketDataSource.sendMessage(message)
+    }
+
+    /**
+     * Sends a typing indicator over WebSocket.
+     * @param isTyping `true` for "start", `false` for "stop".
+     * @param sender   Display name of the sender.
+     */
+    suspend fun sendTypingIndicator(isTyping: Boolean, sender: String) {
+        val message = ChatMessage(
+            sender = sender,
+            content = if (isTyping) "start" else "stop",
+            type = "typing"
+        )
+        webSocketDataSource.sendMessage(message)
+    }
+
+    suspend fun fetchOnlineUsers(): List<String> {
+        return webSocketDataSource.fetchOnlineUsers()
     }
 
     suspend fun disconnect() {

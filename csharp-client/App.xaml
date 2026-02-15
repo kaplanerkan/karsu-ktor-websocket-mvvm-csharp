@@ -3,47 +3,39 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
-        <!-- Dark Theme Colors -->
-        <Color x:Key="BgColor">#1B1B1F</Color>
-        <Color x:Key="SurfaceColor">#2B2B30</Color>
-        <Color x:Key="SurfaceVariantColor">#3A3A40</Color>
-        <Color x:Key="PrimaryColor">#4DB6AC</Color>
-        <Color x:Key="OnBgColor">#E0E0E0</Color>
-        <Color x:Key="OnSurfaceColor">#CCCCCC</Color>
-        <Color x:Key="BorderColor">#444444</Color>
-
-        <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
-        <SolidColorBrush x:Key="SurfaceVariantBrush" Color="{StaticResource SurfaceVariantColor}" />
-        <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
-        <SolidColorBrush x:Key="OnBgBrush" Color="{StaticResource OnBgColor}" />
-        <SolidColorBrush x:Key="OnSurfaceBrush" Color="{StaticResource OnSurfaceColor}" />
-        <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+        <!-- Theme Colors (Dark by default, swapped at runtime) -->
+        <SolidColorBrush x:Key="BgBrush" Color="#1B1B1F" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#2B2B30" />
+        <SolidColorBrush x:Key="SurfaceVariantBrush" Color="#3A3A40" />
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#4DB6AC" />
+        <SolidColorBrush x:Key="OnBgBrush" Color="#E0E0E0" />
+        <SolidColorBrush x:Key="OnSurfaceBrush" Color="#CCCCCC" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#444444" />
 
         <!-- Global Window Style -->
         <Style TargetType="Window">
-            <Setter Property="Background" Value="{StaticResource BgBrush}" />
+            <Setter Property="Background" Value="{DynamicResource BgBrush}" />
         </Style>
 
         <!-- TextBlock -->
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource OnBgBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource OnBgBrush}" />
         </Style>
 
         <!-- TextBox -->
         <Style TargetType="TextBox">
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource OnBgBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
-            <Setter Property="CaretBrush" Value="{StaticResource OnBgBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource OnBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource OnBgBrush}" />
             <Setter Property="Padding" Value="4,3" />
         </Style>
 
         <!-- Button -->
         <Style TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
             <Setter Property="Foreground" Value="#FFFFFF" />
-            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -60,7 +52,7 @@
                                 <Setter TargetName="border" Property="Background" Value="#5DC4B8" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource SurfaceVariantBrush}" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource SurfaceVariantBrush}" />
                                 <Setter Property="Foreground" Value="#666666" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -71,8 +63,8 @@
 
         <!-- ListBox -->
         <Style TargetType="ListBox">
-            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
         </Style>
     </Application.Resources>
 </Application>

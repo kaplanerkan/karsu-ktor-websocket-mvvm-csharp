@@ -32,6 +32,18 @@ namespace ChatClientWpf.Models
         [JsonPropertyName("audioDuration")]
         public long AudioDuration { get; set; }
 
+        /// <summary>Target client ID for direct messages. Null for broadcast.</summary>
+        [JsonPropertyName("sendTo")]
+        public string? SendTo { get; set; }
+
+        /// <summary>Unique message identifier for delivery tracking.</summary>
+        [JsonPropertyName("messageId")]
+        public string? MessageId { get; set; }
+
+        /// <summary>Delivery status: "sent", "delivered", "read".</summary>
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+
         /// <summary>Client-only flag indicating the message was sent by the local user.</summary>
         [JsonIgnore]
         public bool IsFromMe { get; set; }
@@ -40,14 +52,35 @@ namespace ChatClientWpf.Models
         [JsonIgnore]
         public bool IsVoice => Type == "voice";
 
+        /// <summary>Returns true if this is a direct message.</summary>
+        [JsonIgnore]
+        public bool IsDirectMessage => !string.IsNullOrEmpty(SendTo);
+
+        /// <summary>Returns true if this is a status update message.</summary>
+        [JsonIgnore]
+        public bool IsStatusUpdate => Type == "status";
+
+        /// <summary>Returns a status icon for message delivery tracking.</summary>
+        [JsonIgnore]
+        public string StatusIcon => Status switch
+        {
+            "delivered" => "\u2713\u2713",  // ✓✓
+            "read" => "\u2713\u2713",       // ✓✓ (blue in UI)
+            "sent" => "\u2713",             // ✓
+            _ => ""
+        };
+
         /// <summary>Returns true if this message originated from the server.</summary>
+        [JsonIgnore]
         public bool IsFromServer => Sender == "server";
 
         /// <summary>Returns the timestamp formatted as HH:mm for display.</summary>
+        [JsonIgnore]
         public string FormattedTime =>
             DateTimeOffset.FromUnixTimeMilliseconds(Timestamp).LocalDateTime.ToString("HH:mm");
 
         /// <summary>Returns the audio duration formatted as M:SS (e.g. "0:05").</summary>
+        [JsonIgnore]
         public string FormattedDuration
         {
             get

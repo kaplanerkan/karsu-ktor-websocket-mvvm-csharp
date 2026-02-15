@@ -33,15 +33,30 @@
                 android:scaleType="centerInside"
                 app:tint="?attr/colorOnPrimary" />
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="@string/app_name"
-                android:textColor="?attr/colorOnPrimary"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvOnlineUsers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:textSize="11sp"
+                    android:alpha="0.8"
+                    android:visibility="gone" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -95,6 +110,18 @@
         android:clipToPadding="false"
         android:padding="8dp" />
 
+    <!-- Typing Indicator -->
+    <TextView
+        android:id="@+id/tvTypingIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="4dp"
+        android:textSize="12sp"
+        android:textStyle="italic"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone" />
+
     <!-- Bottom Input Bar -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -104,6 +131,17 @@
         android:padding="8dp"
         android:background="?attr/colorSurface"
         android:elevation="8dp">
+
+        <ImageButton
+            android:id="@+id/btnEmoji"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_emoji"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Emoji"
+            android:scaleType="centerInside"
+            android:padding="10dp"
+            app:tint="?attr/colorOnSurfaceVariant" />
 
         <EditText
             android:id="@+id/etMessage"

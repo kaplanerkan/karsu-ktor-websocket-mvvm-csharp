@@ -51,6 +51,25 @@ class ChatAdapter(
             binding.tvSender.text = message.sender
             binding.tvTime.text = timeFormat.format(Date(message.timestamp))
 
+            // Message delivery status
+            if (message.isFromMe && !message.status.isNullOrBlank()) {
+                binding.tvStatus.visibility = View.VISIBLE
+                binding.tvStatus.text = when (message.status) {
+                    "sent" -> "\u2713"      // ✓
+                    "delivered" -> "\u2713\u2713"  // ✓✓
+                    "read" -> "\u2713\u2713"  // ✓✓
+                    else -> ""
+                }
+                val statusColor = if (message.status == "read") {
+                    MaterialColors.getColor(context, android.R.attr.colorPrimary, 0)
+                } else {
+                    MaterialColors.getColor(context, MaterialR.attr.colorOnSurface, 0)
+                }
+                binding.tvStatus.setTextColor(statusColor)
+            } else {
+                binding.tvStatus.visibility = View.GONE
+            }
+
             // Toggle text vs voice content
             if (message.isVoice) {
                 binding.tvContent.visibility = View.GONE
@@ -110,8 +129,12 @@ class ChatAdapter(
     }
 
     class MessageDiffCallback : DiffUtil.ItemCallback<ChatMessage>() {
-        override fun areItemsTheSame(old: ChatMessage, new: ChatMessage) =
-            old.timestamp == new.timestamp && old.sender == new.sender
+        override fun areItemsTheSame(old: ChatMessage, new: ChatMessage): Boolean {
+            if (!old.messageId.isNullOrBlank() && !new.messageId.isNullOrBlank()) {
+                return old.messageId == new.messageId
+            }
+            return old.timestamp == new.timestamp && old.sender == new.sender
+        }
 
         override fun areContentsTheSame(old: ChatMessage, new: ChatMessage) =
             old == new

@@ -37,11 +37,18 @@
     <!-- Username -->
     <string name="label_username">Username</string>
 
+    <!-- Room -->
+    <string name="label_room">Room</string>
+
     <!-- Theme -->
     <string name="label_dark_mode">Dark Mode</string>
 
     <!-- Close Reason -->
     <string name="close_reason">Client closed</string>
+
+    <!-- Online Users -->
+    <string name="online_users_count">%d online</string>
+    <string name="online_users_title">Online Users</string>
 
     <!-- Voice Message -->
     <string name="btn_mic">Record voice</string>

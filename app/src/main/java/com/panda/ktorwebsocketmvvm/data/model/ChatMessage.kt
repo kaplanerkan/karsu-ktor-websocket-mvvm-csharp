@@ -23,11 +23,22 @@ data class ChatMessage(
     val type: String = "text",
     val audioData: String? = null,
     val audioDuration: Long = 0,
+    val sendTo: String? = null,
+    val messageId: String? = null,
+    val status: String? = null,
     @Transient val isFromMe: Boolean = false
 ) {
+    /** Returns `true` if this is a direct message. */
+    val isDirectMessage: Boolean get() = !sendTo.isNullOrBlank()
+
+    /** Returns `true` if this is a delivery status update. */
+    val isStatusUpdate: Boolean get() = type == "status"
     /** Returns `true` if this message originated from the server. */
     val isFromServer: Boolean get() = sender == "server"
 
     /** Returns `true` if this is a voice message. */
     val isVoice: Boolean get() = type == "voice"
+
+    /** Returns `true` if this is a typing indicator message. */
+    val isTyping: Boolean get() = type == "typing"
 }

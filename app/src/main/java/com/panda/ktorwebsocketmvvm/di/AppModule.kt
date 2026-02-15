@@ -2,8 +2,10 @@ package com.panda.ktorwebsocketmvvm.di
 
 import com.panda.ktorwebsocketmvvm.data.audio.AudioPlayer
 import com.panda.ktorwebsocketmvvm.data.audio.AudioRecorder
+import com.panda.ktorwebsocketmvvm.data.audio.SoundEffectManager
 import com.panda.ktorwebsocketmvvm.data.remote.WebSocketDataSource
 import com.panda.ktorwebsocketmvvm.data.repository.ChatRepository
+import com.panda.ktorwebsocketmvvm.notification.ChatNotificationManager
 import com.panda.ktorwebsocketmvvm.ui.chat.ChatViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
@@ -15,5 +17,7 @@ val appModule = module {
     singleOf(::ChatRepository)
     single { AudioRecorder(androidContext()) }
     single { AudioPlayer(androidContext()) }
+    single { SoundEffectManager(androidContext()) }
+    single { ChatNotificationManager(androidContext()) }
     viewModelOf(::ChatViewModel)
 }

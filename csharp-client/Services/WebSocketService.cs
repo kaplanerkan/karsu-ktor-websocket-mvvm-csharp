@@ -26,7 +26,7 @@ namespace ChatClientWpf.Services
             }
         }
 
-        public async Task ConnectAsync(string host, int port, string clientId = "csharp-1")
+        public async Task ConnectAsync(string host, int port, string clientId = "csharp-1", string roomId = "general")
         {
             await _connectionLock.WaitAsync();
             try
@@ -40,7 +40,8 @@ namespace ChatClientWpf.Services
                 _webSocket = ws;
                 _cts = cts;
 
-                var uri = new Uri($"ws://{host}:{port}/chat/{clientId}");
+                var path = roomId == "general" ? $"/chat/{clientId}" : $"/chat/{roomId}/{clientId}";
+                var uri = new Uri($"ws://{host}:{port}{path}");
                 Logger.Info($"Connecting to {uri}");
                 OnConnectionStateChanged?.Invoke("Connecting");
 

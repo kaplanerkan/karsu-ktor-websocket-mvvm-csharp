@@ -6,6 +6,8 @@ import com.panda.ktorwebsocketmvvm.data.model.ErrorType
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -36,6 +38,9 @@ class WebSocketDataSource : Closeable {
     @Volatile private var session: DefaultClientWebSocketSession? = null
     @Volatile private var connectionJob: Job? = null
 
+    @Volatile private var connectedHost: String = ""
+    @Volatile private var connectedPort: Int = 8080
+
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
@@ -45,7 +50,7 @@ class WebSocketDataSource : Closeable {
     /**
      * WebSocket sunucusuna bağlanır ve gelen mesajları dinler.
      */
-    suspend fun connect(host: String, port: Int, clientId: String = "android-1") {
+    suspend fun connect(host: String, port: Int, clientId: String = "android-1", roomId: String = "general") {
         mutex.withLock {
             if (_connectionState.value == ConnectionState.Connected ||
                 _connectionState.value == ConnectionState.Connecting) return
@@ -57,12 +62,16 @@ class WebSocketDataSource : Closeable {
             _connectionState.value = ConnectionState.Connecting
         }
 
+        connectedHost = host
+        connectedPort = port
+
         connectionJob = CoroutineScope(Dispatchers.IO).launch {
             try {
+                val path = if (roomId == "general") "/chat/$clientId" else "/chat/$roomId/$clientId"
                 client.webSocket(
                     host = host,
                     port = port,
-                    path = "/chat/$clientId"
+                    path = path
                 ) {
                     session = this
                     _connectionState.value = ConnectionState.Connected
@@ -123,6 +132,19 @@ class WebSocketDataSource : Closeable {
             _connectionState.value = ConnectionState.Error(
                 ErrorType.MESSAGE_FAILED, e.message
             )
+        }
+    }
+
+    /**
+     * Fetches the list of currently connected clients from the REST endpoint.
+     */
+    suspend fun fetchOnlineUsers(): List<String> {
+        return try {
+            val response: HttpResponse = client.get("http://$connectedHost:$connectedPort/clients")
+            val text = response.bodyAsText()
+            json.decodeFromString<List<String>>(text)
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 

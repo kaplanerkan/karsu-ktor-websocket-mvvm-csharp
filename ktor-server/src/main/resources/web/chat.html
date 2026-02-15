@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KarSu Chat</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #1E1E24;
+    color: #E0E0E0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    background: #2B2B30;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #3A3A40;
+  }
+  .header h1 { font-size: 18px; color: #4DB6AC; font-weight: 600; }
+  .header .online-badge {
+    background: #2B2B30;
+    border: 1px solid #3A3A40;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #80CBC4;
+    cursor: pointer;
+    display: none;
+  }
+  .header .online-badge:hover { background: #3A3A40; }
+  .header .status {
+    font-size: 13px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .header .status .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #666;
+  }
+  .header .status.connected .dot { background: #4DB6AC; }
+  .header .status.connecting .dot { background: #FFC107; }
+
+  /* Connection Bar */
+  .conn-bar {
+    background: #25252B;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #3A3A40;
+  }
+  .conn-bar input {
+    background: #1E1E24;
+    border: 1px solid #3A3A40;
+    color: #E0E0E0;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  .conn-bar input:focus { border-color: #4DB6AC; }
+  .conn-bar input.username { width: 120px; }
+  .conn-bar button {
+    padding: 7px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn-connect {
+    background: #4DB6AC;
+    color: #1E1E24;
+  }
+  .btn-connect:hover { background: #5DC4BA; }
+  .btn-connect:disabled { background: #3A3A40; color: #666; cursor: not-allowed; }
+  .btn-disconnect {
+    background: #E57373;
+    color: #1E1E24;
+  }
+  .btn-disconnect:hover { background: #EF9A9A; }
+  .btn-disconnect:disabled { background: #3A3A40; color: #666; cursor: not-allowed; }
+
+  /* Messages */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: #3A3A40; border-radius: 3px; }
+
+  .msg {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    word-wrap: break-word;
+  }
+  .msg .sender {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .msg .sender .time { color: #888; font-weight: 400; }
+  .msg .content { font-size: 14px; line-height: 1.4; }
+
+  /* My messages */
+  .msg.mine {
+    align-self: flex-end;
+    background: #1A4D4A;
+    border-radius: 12px 12px 2px 12px;
+  }
+  .msg.mine .sender { color: #4DB6AC; }
+
+  /* Others' messages */
+  .msg.other {
+    align-self: flex-start;
+    background: #2B2B30;
+    border-radius: 12px 12px 12px 2px;
+  }
+  .msg.other .sender { color: #80CBC4; }
+
+  /* Server messages */
+  .msg.server {
+    align-self: center;
+    background: #3A3A40;
+    border-radius: 12px;
+    max-width: 60%;
+    text-align: center;
+  }
+  .msg.server .sender { color: #999; }
+  .msg.server .content { color: #BBB; }
+
+  /* Voice messages */
+  .voice-panel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .voice-panel .play-btn {
+    background: none;
+    border: none;
+    color: #4DB6AC;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  .voice-panel .play-btn:hover { color: #80CBC4; }
+  .voice-panel .duration { color: #AAA; font-size: 13px; }
+  .voice-panel .label { color: #888; font-size: 12px; font-style: italic; }
+
+  /* Emoji Picker */
+  .emoji-picker {
+    display: none;
+    position: absolute;
+    bottom: 60px;
+    right: 20px;
+    background: #2B2B30;
+    border: 1px solid #3A3A40;
+    border-radius: 12px;
+    padding: 8px;
+    width: 280px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .emoji-picker span {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    text-align: center;
+    line-height: 32px;
+    font-size: 20px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .emoji-picker span:hover { background: #3A3A40; }
+  .btn-emoji {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 20px;
+  }
+  .btn-emoji:hover { background: #3A3A40; }
+
+  /* Typing indicator */
+  .typing-bar {
+    padding: 2px 20px;
+    font-size: 12px;
+    font-style: italic;
+    color: #80CBC4;
+    min-height: 20px;
+  }
+
+  /* Input Bar */
+  .input-bar {
+    background: #25252B;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid #3A3A40;
+  }
+  .input-bar input {
+    flex: 1;
+    background: #1E1E24;
+    border: 1px solid #3A3A40;
+    color: #E0E0E0;
+    padding: 10px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    outline: none;
+  }
+  .input-bar input:focus { border-color: #4DB6AC; }
+  .input-bar input:disabled { opacity: 0.5; }
+  .input-bar button {
+    background: #4DB6AC;
+    color: #1E1E24;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .input-bar button:hover { background: #5DC4BA; }
+  .input-bar button:disabled { background: #3A3A40; color: #666; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>KarSu Chat</h1>
+  <span class="online-badge" id="onlineBadge" onclick="showOnlineUsers()" title="Click to see online users"></span>
+  <div class="status" id="statusBar">
+    <span class="dot"></span>
+    <span id="statusText">Disconnected</span>
+  </div>
+</div>
+
+<!-- Connection Bar -->
+<div class="conn-bar">
+  <input type="text" id="inputUsername" class="username" placeholder="Username" value="web-user">
+  <input type="text" id="inputRoom" style="width:90px" placeholder="Room" value="general">
+  <button class="btn-connect" id="btnConnect" onclick="doConnect()">Connect</button>
+  <button class="btn-disconnect" id="btnDisconnect" onclick="doDisconnect()" disabled>Disconnect</button>
+</div>
+
+<!-- Message List -->
+<div class="messages" id="messageList"></div>
+
+<!-- Typing Indicator -->
+<div class="typing-bar" id="typingBar"></div>
+
+<!-- Emoji Picker -->
+<div class="emoji-picker" id="emojiPicker"></div>
+
+<!-- Input Bar -->
+<div class="input-bar">
+  <input type="text" id="inputMessage" placeholder="Type a message..." disabled
+         oninput="onInputChanged()" onkeydown="if(event.key==='Enter') doSend()">
+  <button class="btn-emoji" id="btnEmoji" onclick="toggleEmojiPicker()" title="Emoji">&#128522;</button>
+  <button id="btnSend" onclick="doSend()" disabled>Send</button>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────
+  let ws = null;
+  let username = '';
+  let lastTypingSent = 0;
+  let typingTimeout = null;
+  const TYPING_DEBOUNCE = 2000;
+  const TYPING_EXPIRE = 4000;
+  const typingUsers = new Map(); // sender -> expireTimeout
+
+  // ── DOM refs ───────────────────────────────────────
+  const $status = document.getElementById('statusBar');
+  const $statusText = document.getElementById('statusText');
+  const $messages = document.getElementById('messageList');
+  const $typingBar = document.getElementById('typingBar');
+  const $inputMsg = document.getElementById('inputMessage');
+  const $btnSend = document.getElementById('btnSend');
+  const $btnConnect = document.getElementById('btnConnect');
+  const $btnDisconnect = document.getElementById('btnDisconnect');
+  const $inputUsername = document.getElementById('inputUsername');
+
+  // ── Connection ─────────────────────────────────────
+  const $inputRoom = document.getElementById('inputRoom');
+
+  function doConnect() {
+    username = $inputUsername.value.trim() || 'web-user';
+    $inputUsername.value = username;
+    const roomId = ($inputRoom.value.trim() || 'general');
+    $inputRoom.value = roomId;
+
+    const host = location.host;
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const path = roomId === 'general'
+      ? `/chat/${encodeURIComponent(username)}`
+      : `/chat/${encodeURIComponent(roomId)}/${encodeURIComponent(username)}`;
+    const url = `${protocol}//${host}${path}`;
+
+    setStatus('connecting');
+    $messages.innerHTML = '';
+    clearAllTyping();
+
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      setStatus('connected');
+      $inputMsg.disabled = false;
+      $btnSend.disabled = false;
+      $btnConnect.disabled = true;
+      $btnDisconnect.disabled = false;
+      $inputUsername.disabled = true;
+      $inputRoom.disabled = true;
+      $inputMsg.focus();
+      startOnlinePolling();
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'typing') {
+          handleTypingIndicator(msg);
+        } else if (msg.type === 'status' && msg.messageId) {
+          // Update delivery status
+          const el = sentMessages.get(msg.messageId);
+          if (el) {
+            const statusSpan = el.querySelector('.msg-status');
+            if (statusSpan) {
+              statusSpan.textContent = msg.status === 'delivered' ? ' \u2713\u2713' :
+                                       msg.status === 'read' ? ' \u2713\u2713' : ' \u2713';
+              if (msg.status === 'read') statusSpan.style.color = '#4DB6AC';
+            }
+          }
+        } else {
+          removeTypingUser(msg.sender);
+          if (msg.sendTo) msg.content = `[DM] ${msg.content}`;
+          addMessage(msg);
+          playReceiveSound();
+        }
+      } catch (e) {
+        console.error('Failed to parse message:', e);
+      }
+    };
+
+    ws.onclose = () => {
+      setStatus('disconnected');
+      setDisconnectedUI();
+    };
+
+    ws.onerror = () => {
+      setStatus('disconnected');
+      setDisconnectedUI();
+    };
+  }
+
+  function doDisconnect() {
+    sendTypingStop();
+    clearAllTyping();
+    stopOnlinePolling();
+    if (ws) { ws.close(); ws = null; }
+    setStatus('disconnected');
+    setDisconnectedUI();
+  }
+
+  function setDisconnectedUI() {
+    $inputMsg.disabled = true;
+    $btnSend.disabled = true;
+    $btnConnect.disabled = false;
+    $btnDisconnect.disabled = true;
+    $inputUsername.disabled = false;
+    $inputRoom.disabled = false;
+  }
+
+  function setStatus(state) {
+    $status.className = 'status ' + state;
+    const labels = { connected: 'Connected', connecting: 'Connecting...', disconnected: 'Disconnected' };
+    $statusText.textContent = labels[state] || 'Disconnected';
+  }
+
+  // ── Messaging ──────────────────────────────────────
+  function doSend() {
+    const text = $inputMsg.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    sendTypingStop();
+
+    const msgId = Math.random().toString(36).substring(2, 10);
+    const wireMsg = {
+      sender: username,
+      content: text,
+      timestamp: Date.now(),
+      type: 'text',
+      messageId: msgId,
+      status: 'sent'
+    };
+    if (dmTarget) wireMsg.sendTo = dmTarget;
+
+    const displayMsg = { ...wireMsg };
+    if (dmTarget) displayMsg.content = `[DM to ${dmTarget}] ${text}`;
+
+    ws.send(JSON.stringify(wireMsg));
+    addMessage(displayMsg, true, msgId);
+    playSendSound();
+    $inputMsg.value = '';
+    $inputMsg.focus();
+  }
+
+  function addMessage(msg, isMine, msgId) {
+    const el = document.createElement('div');
+    const isServer = msg.sender === 'server';
+    el.className = 'msg ' + (isMine ? 'mine' : isServer ? 'server' : 'other');
+
+    const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let body = '';
+
+    if (msg.type === 'voice' && msg.audioData) {
+      const dur = msg.audioDuration || 0;
+      const secs = Math.floor(dur / 1000);
+      const formatted = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+      body = `
+        <div class="voice-panel">
+          <button class="play-btn" onclick="playAudio(this, '${msg.audioData}')">&#9654;</button>
+          <span class="duration">${formatted}</span>
+          <span class="label">Voice</span>
+        </div>`;
+    } else {
+      body = `<div class="content">${escapeHtml(msg.content)}</div>`;
+    }
+
+    const statusHtml = isMine ? `<span class="msg-status" style="color:#888;font-size:10px"> \u2713</span>` : '';
+    el.innerHTML = `
+      <div class="sender">${escapeHtml(msg.sender)} <span class="time">&middot; ${time}</span>${statusHtml}</div>
+      ${body}`;
+
+    $messages.appendChild(el);
+    $messages.scrollTop = $messages.scrollHeight;
+
+    if (msgId && isMine) sentMessages.set(msgId, el);
+  }
+
+  // ── Voice Playback ─────────────────────────────────
+  let currentAudio = null;
+
+  function playAudio(btn, base64) {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+      document.querySelectorAll('.play-btn').forEach(b => b.textContent = '\u25B6');
+    }
+
+    if (btn.textContent === '\u23F9') {
+      btn.textContent = '\u25B6';
+      return;
+    }
+
+    try {
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      // Try multiple MIME types for compatibility
+      const types = ['audio/mp4', 'audio/aac', 'audio/wav', 'audio/mpeg'];
+      let blob = null;
+      for (const t of types) {
+        blob = new Blob([bytes], { type: t });
+        break;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudio = audio;
+      btn.textContent = '\u23F9';
+
+      audio.onended = () => {
+        btn.textContent = '\u25B6';
+        URL.revokeObjectURL(url);
+        currentAudio = null;
+      };
+      audio.onerror = () => {
+        // Retry with different MIME type
+        btn.textContent = '\u25B6';
+        URL.revokeObjectURL(url);
+        currentAudio = null;
+        tryPlayWithDifferentType(btn, bytes, types, 1);
+      };
+      audio.play();
+    } catch (e) {
+      console.error('Audio playback failed:', e);
+      btn.textContent = '\u25B6';
+    }
+  }
+
+  function tryPlayWithDifferentType(btn, bytes, types, index) {
+    if (index >= types.length) return;
+    const blob = new Blob([bytes], { type: types[index] });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    btn.textContent = '\u23F9';
+
+    audio.onended = () => {
+      btn.textContent = '\u25B6';
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+    };
+    audio.onerror = () => {
+      btn.textContent = '\u25B6';
+      URL.revokeObjectURL(url);
+      currentAudio = null;
+      tryPlayWithDifferentType(btn, bytes, types, index + 1);
+    };
+    audio.play();
+  }
+
+  // ── Typing Indicator (Send) ────────────────────────
+  function onInputChanged() {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+    const text = $inputMsg.value;
+    if (text.length > 0) {
+      const now = Date.now();
+      if (now - lastTypingSent >= TYPING_DEBOUNCE) {
+        lastTypingSent = now;
+        sendTyping('start');
+      }
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        sendTyping('stop');
+        lastTypingSent = 0;
+      }, TYPING_DEBOUNCE);
+    } else {
+      sendTypingStop();
+    }
+  }
+
+  function sendTyping(content) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      sender: username,
+      content: content,
+      timestamp: Date.now(),
+      type: 'typing'
+    }));
+  }
+
+  function sendTypingStop() {
+    clearTimeout(typingTimeout);
+    typingTimeout = null;
+    lastTypingSent = 0;
+    sendTyping('stop');
+  }
+
+  // ── Typing Indicator (Receive) ─────────────────────
+  function handleTypingIndicator(msg) {
+    if (msg.content === 'start') {
+      if (typingUsers.has(msg.sender)) clearTimeout(typingUsers.get(msg.sender));
+      typingUsers.set(msg.sender, setTimeout(() => {
+        typingUsers.delete(msg.sender);
+        updateTypingDisplay();
+      }, TYPING_EXPIRE));
+    } else {
+      if (typingUsers.has(msg.sender)) clearTimeout(typingUsers.get(msg.sender));
+      typingUsers.delete(msg.sender);
+    }
+    updateTypingDisplay();
+  }
+
+  function removeTypingUser(sender) {
+    if (typingUsers.has(sender)) {
+      clearTimeout(typingUsers.get(sender));
+      typingUsers.delete(sender);
+      updateTypingDisplay();
+    }
+  }
+
+  function clearAllTyping() {
+    typingUsers.forEach(t => clearTimeout(t));
+    typingUsers.clear();
+    updateTypingDisplay();
+  }
+
+  function updateTypingDisplay() {
+    const users = Array.from(typingUsers.keys());
+    if (users.length === 0) {
+      $typingBar.textContent = '';
+    } else if (users.length === 1) {
+      $typingBar.textContent = users[0] + ' is typing...';
+    } else if (users.length === 2) {
+      $typingBar.textContent = users.join(' and ') + ' are typing...';
+    } else {
+      $typingBar.textContent = users.slice(0, 2).join(', ') + ' and ' + (users.length - 2) + ' more are typing...';
+    }
+  }
+
+  // ── Online Users Polling ─────────────────────────
+  const $onlineBadge = document.getElementById('onlineBadge');
+  let onlineUsersList = [];
+  let onlinePollTimer = null;
+  let dmTarget = null; // null = broadcast, string = DM target
+  const sentMessages = new Map(); // messageId -> DOM element
+
+  function startOnlinePolling() {
+    stopOnlinePolling();
+    fetchOnlineUsers();
+    onlinePollTimer = setInterval(fetchOnlineUsers, 5000);
+  }
+
+  function stopOnlinePolling() {
+    if (onlinePollTimer) { clearInterval(onlinePollTimer); onlinePollTimer = null; }
+    onlineUsersList = [];
+    $onlineBadge.style.display = 'none';
+  }
+
+  async function fetchOnlineUsers() {
+    try {
+      const resp = await fetch('/clients');
+      onlineUsersList = await resp.json();
+      $onlineBadge.textContent = onlineUsersList.length + ' online';
+      $onlineBadge.style.display = onlineUsersList.length > 0 ? 'inline-block' : 'none';
+    } catch (e) { /* ignore */ }
+  }
+
+  function showOnlineUsers() {
+    if (onlineUsersList.length === 0) return;
+    const options = ['Broadcast (All)', ...onlineUsersList];
+    const choice = prompt('Select DM target (enter number):\n\n' +
+      options.map((u, i) => `${i}. ${u}`).join('\n') + '\n\nEnter number or cancel:');
+    if (choice === null) return;
+    const idx = parseInt(choice);
+    if (idx === 0 || isNaN(idx)) {
+      dmTarget = null;
+      $inputMsg.placeholder = 'Type a message...';
+    } else if (idx > 0 && idx < options.length) {
+      dmTarget = options[idx];
+      $inputMsg.placeholder = `DM to ${dmTarget}...`;
+    }
+  }
+
+  // ── Emoji Picker ─────────────────────────────────
+  const emojis = [
+    '😀','😂','😍','🥰','😎','🤔','😮','😢','😡','🥳',
+    '👍','👎','👏','🙏','💪','🤝','❤️','🔥','⭐','🎉',
+    '✅','❌','💯','🚀','💡','🎵','📸','🏆','🌟','💬',
+    '😊','😁','🤣','😅','😇','🥺','😏','😴','🤮','🤯',
+    '👋','✌️','🤞','🖐️','👀','💀','🤡','👻','💩','🙈'
+  ];
+  const $emojiPicker = document.getElementById('emojiPicker');
+  emojis.forEach(e => {
+    const span = document.createElement('span');
+    span.textContent = e;
+    span.onclick = () => {
+      $inputMsg.value += e;
+      $inputMsg.focus();
+      onInputChanged();
+      $emojiPicker.style.display = 'none';
+    };
+    $emojiPicker.appendChild(span);
+  });
+
+  function toggleEmojiPicker() {
+    $emojiPicker.style.display = $emojiPicker.style.display === 'block' ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.emoji-picker') && !e.target.closest('.btn-emoji')) {
+      $emojiPicker.style.display = 'none';
+    }
+  });
+
+  // ── Sound Effects ────────────────────────────────
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  function playTone(freq, duration, type = 'sine') {
+    try {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.value = 0.1;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch (e) { /* ignore */ }
+  }
+
+  function playSendSound() { playTone(880, 0.1); }
+  function playReceiveSound() { playTone(660, 0.15, 'triangle'); }
+
+  // ── Utilities ──────────────────────────────────────
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>
